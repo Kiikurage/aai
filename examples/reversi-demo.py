@@ -1,5 +1,8 @@
-from board import init_game, format_board, get_reversible_count, put, Board, is_valid
-from game import Color
+import sys
+import os.path as path
+sys.path.append(path.join(path.dirname(__file__), "../game"))
+
+from board import Color, init_game, format_board, get_reversible_count, put, Board, is_valid
 import numpy as np
 
 

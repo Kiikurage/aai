@@ -1,5 +1,8 @@
-from game import Color
 import numpy as np
+
+class Color:
+    Black = 0
+    White = 1
 
 Board = np.ndarray
 
