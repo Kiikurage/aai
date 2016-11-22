@@ -15,6 +15,6 @@
 
 ## Reference
 
-- オセロAIの有名論文 Experiments with Multi-ProbCut and a New High-Quality Evaluation Function for Othello
+- オセロAIの有名論文 Experiments: with Multi-ProbCut and a New High-Quality Evaluation Function for Othello
 - 強化学習オセロの有名論文 MOUSE(μ): A self-teaching algorithm that achieved master-strength at Othello 
 
