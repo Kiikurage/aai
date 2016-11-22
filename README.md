@@ -5,6 +5,13 @@
 - Evolution of Game AI
 - Can we create AI which can lead to draw?
 
+
+## Requirements 
+
+- Python &ge; 3.4
+- Chainer &ge; 1.5
+
+
 ## Components
 
 - 高速なオセロシミュレータ
