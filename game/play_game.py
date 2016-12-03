@@ -8,8 +8,8 @@ import numpy as np
 
 #input file name
 file_name = '01E4.gam.1.new'
-#select which game to play (game_index > 0)
-game_index=0
+
+#game_index=0
 
 with open('../train_data/kifu/'+file_name) as f:
     lines = f.readlines()
