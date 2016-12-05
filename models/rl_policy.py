@@ -1,24 +1,30 @@
 import chainer
 import chainer.functions as F
-from chainer.functions.loss.vae import gaussian_kl_divergence
 import chainer.links as L
 from chainer import cuda
 import numpy as np
 
 
-class RL_POLICY(chainer.Chain):
+def softmax(x, T):
+    y = x - x.max(axis=1, keepdims=True)
+    y = np.exp(y / T)
+    y /= y.sum(axis=1, keepdims=True)
+    return y
+
+
+class RLPolicy(chainer.Chain):
     """Supervised learning policy network"""
 
-    def __init__(self,density=1, size=8, channel=5):
+    def __init__(self,density=1, size=8, channel=6):
         """
-        黒[0,1] | 白[0,1] | empty[0, 1] |置いた場合にひっくり返る個数 | ターン数
+        黒[0,1] | 白[0,1] | empty[0, 1] | 置いた場合にひっくり返る個数 | 手番が黒か否か | ターン数 |
 
         :param density: 1
         :param size: 8
         :param channel: 5?
         """
 
-        super(RL_POLICY, self).__init__(
+        super(RLPolicy, self).__init__(
             conv1=L.Convolution2D(channel, 8 * density, 4, stride=1, pad=1),
             norm1=L.BatchNormalization(8 * density),
             conv2=L.Convolution2D(8 * density, 16 * density, 4, stride=1, pad=1),
@@ -44,9 +50,9 @@ class RL_POLICY(chainer.Chain):
 
         return self.loss
 
-    def act(self, x):
+    def act(self, x, temperature=1):
         scores = self.predict(x)
-        pred = cuda.to_cpu(F.softmax(scores).data)
+        pred = softmax(cuda.to_cpu(scores.data), T=temperature)
         action = [np.random.choice(64, p=p) for p in pred]
 
         return action
