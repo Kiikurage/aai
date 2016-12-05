@@ -1,31 +1,16 @@
 import numpy as np
-
-
-class Color:
-    Black = 0
-    White = 1
-
+from .color import Color
 
 Board = np.ndarray
 
 
 def init() -> Board:
     """
-    盤面を初期化する
-    :return: (Board) 初期化された盤面
-    """
-
-    return np.zeros((2, 8, 8), dtype=np.bool)
-
-
-def init_game() -> Board:
-    """
     盤面をゲームの初期状態に初期化する
     :return: (Board) 初期化された盤面
     """
 
-    b = init()
-    print(Color.Black)
+    b = np.zeros((2, 8, 8), dtype=np.bool)
     b[Color.White, 3, 3] = True
     b[Color.White, 4, 4] = True
     b[Color.Black, 3, 4] = True
@@ -33,7 +18,7 @@ def init_game() -> Board:
     return b
 
 
-def format_board(b: Board) -> str:
+def stringify(b: Board) -> str:
     """
     盤面を文字列化する
     :param b: (Board) 盤面
@@ -198,7 +183,6 @@ def to_state(b, color, n):
 
 
 class Games(object):
-
     def __init__(self, n):
         self.n = n
         self.t = 1
@@ -206,7 +190,6 @@ class Games(object):
         self.multiple_init_game(n)
 
     def multiple_init_game(self, n):
-
         """
         n個の盤面をゲームの初期状態に初期化する
         :return: (Board) 初期化された盤面
@@ -228,4 +211,4 @@ class Games(object):
             self.board[i] = put(self.board[i], color, x, y)
 
         # noinspection PyTypeChecker
-        return to_state(self.board, 1-color, self.t+1)
+        return to_state(self.board, 1 - color, self.t + 1)
