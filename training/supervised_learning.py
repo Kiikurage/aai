@@ -42,29 +42,7 @@ class PreprocessedDataset(dataset.DatasetMixin):
 
         color, ply = plies[n]
 
-        res = np.empty((6, 8, 8), dtype=np.float32)
-
-        # 黒石/白石の位置
-        res[0:2, :, :] = b.astype(np.float32)
-
-        # 有効手かどうか, 裏返せる石の数
-        for x in range(8):
-            for y in range(8):
-                if board.is_valid(b, color, x, y):
-                    res[2, x, y] = 1
-                    res[5, x, y] = board.get_reversible_count(b, color, x, y)
-
-                else:
-                    res[2, x, y] = 0
-                    res[5, x, y] = 0
-
-        res[5, :, :] /= res[5, :, :].max()
-
-        # ターン数
-        res[3, :, :] = n / 64
-
-        # 自分の色
-        res[4, :, :] = color
+        res = board.to_state(b, color, n)
 
         return res, ply
 

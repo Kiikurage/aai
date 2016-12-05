@@ -1,8 +1,10 @@
 import numpy as np
 
+
 class Color:
     Black = 0
     White = 1
+
 
 Board = np.ndarray
 
@@ -167,3 +169,63 @@ def put(b: Board, c: Color, x: int, y: int):
             py += dy
 
     return result
+
+
+def to_state(b, color, n):
+    res = np.empty((6, 8, 8), dtype=np.float32)
+
+    # 黒石/白石の位置
+    res[0:2, :, :] = b.astype(np.float32)
+
+    # 有効手かどうか, 裏返せる石の数
+    for x in range(8):
+        for y in range(8):
+            if is_valid(b, color, x, y):
+                res[2, x, y] = 1
+                res[5, x, y] = get_reversible_count(b, color, x, y)
+
+            else:
+                res[2, x, y] = 0
+                res[5, x, y] = 0
+
+    res[5, :, :] /= res[5, :, :].max()
+
+    # ターン数
+    res[3, :, :] = n / 64
+
+    # 自分の色
+    res[4, :, :] = color
+
+
+class Games(object):
+
+    def __init__(self, n):
+        self.n = n
+        self.t = 1
+        self.board = np.zeros((n, 2, 8, 8), dtype=np.bool)
+        self.multiple_init_game(n)
+
+    def multiple_init_game(self, n):
+
+        """
+        n個の盤面をゲームの初期状態に初期化する
+        :return: (Board) 初期化された盤面
+        """
+
+        self.board = np.zeros((n, 2, 8, 8), dtype=np.bool)
+
+        print(Color.Black)
+        self.board[:, Color.White, 3, 3] = True
+        self.board[:, Color.White, 4, 4] = True
+        self.board[:, Color.Black, 3, 4] = True
+        self.board[:, Color.Black, 4, 3] = True
+
+    def multiple_put(self, plies):
+        color = Color.Black if self.t % 2 == 1 else Color.White  # type:Color
+        for i in range(self.n):
+            x = plies[i] // 8
+            y = plies[i] % 8
+            self.board[i] = put(self.board[i], color, x, y)
+
+        # noinspection PyTypeChecker
+        return to_state(self.board, 1-color, self.t+1)
