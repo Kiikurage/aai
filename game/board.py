@@ -24,10 +24,10 @@ def init_game() -> Board:
 
     b = init()
     print(Color.Black)
-    b[Color.Black, 3, 3] = True
-    b[Color.Black, 4, 4] = True
-    b[Color.White, 3, 4] = True
-    b[Color.White, 4, 3] = True
+    b[Color.White, 3, 3] = True
+    b[Color.White, 4, 4] = True
+    b[Color.Black, 3, 4] = True
+    b[Color.Black, 4, 3] = True
     return b
 
 
