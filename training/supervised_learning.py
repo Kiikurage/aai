@@ -8,7 +8,7 @@ from chainer import cuda
 from chainer import dataset
 from chainer import training, iterators
 from chainer.training import extensions
-from models.sl_policy import SLPolicy
+from models import SLPolicy
 
 DATA_PATH = '/mnt/share/aai_kikura/data.pkl'
 
