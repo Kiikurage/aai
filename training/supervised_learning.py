@@ -14,11 +14,14 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from reversi import board
 from models import SLPolicy
 
-DATA_PATH = '/mnt/share/aai_fukuta/data.small.pkl'
+DATA_DIR = '/mnt/share/aai_fukuta/'
+train_path = DATA_DIR + 'data.train.pkl'
+test_path = DATA_DIR + 'data.test.pkl'
+small_train_path = DATA_DIR + 'data.small.pkl'
 
 
 class PreprocessedDataset(dataset.DatasetMixin):
-    def __init__(self, data_path=DATA_PATH):
+    def __init__(self, data_path):
         with open(data_path, 'rb') as f:
             self.data = pkl.load(f)
 
@@ -76,8 +79,8 @@ def main():
     for k, v in args._get_kwargs():
         print('{} = {}'.format(k, v))
 
-    train = PreprocessedDataset()
-    test = PreprocessedDataset()
+    train = PreprocessedDataset(small_train_path)
+    test = PreprocessedDataset(test_path)
 
     train_iter = iterators.SerialIterator(train, 128)
     val_iter = iterators.SerialIterator(test, 128, repeat=False)
