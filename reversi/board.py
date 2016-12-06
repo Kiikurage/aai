@@ -173,13 +173,15 @@ def to_state(b, color, n):
                 res[2, x, y] = 0
                 res[5, x, y] = 0
 
-    res[5, :, :] /= res[5, :, :].max()
+    # res[5, :, :] /= res[5, :, :].max()
 
     # ターン数
     res[3, :, :] = n / 64
 
     # 自分の色
     res[4, :, :] = color
+
+    return res
 
 
 class Games(object):
