@@ -1,16 +1,20 @@
 import random
 import argparse
+import os, sys
 import numpy as np
-from game import board
 import pickle as pkl
 import chainer
 from chainer import cuda
 from chainer import dataset
 from chainer import training, iterators
 from chainer.training import extensions
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from reversi import board
 from models import SLPolicy
 
-DATA_PATH = '/mnt/share/aai_kikura/data.pkl'
+DATA_PATH = '/mnt/share/aai_fukuta/data.small.pkl'
 
 
 class PreprocessedDataset(dataset.DatasetMixin):
@@ -29,7 +33,7 @@ class PreprocessedDataset(dataset.DatasetMixin):
         # 各チャンネルの詳細は https://github.com/Kiikurage/aai/issues/13 を参照
 
         plies = game['plies']
-        b = board.init_game()
+        b = board.init()
         n = random.randint(0, len(plies) - 1)
 
         for color, ply in plies[:n]:
@@ -69,6 +73,9 @@ def main():
         cuda.get_device(args.gpu).use()
         model.to_gpu()
 
+    for k, v in args._get_kwargs():
+        print('{} = {}'.format(k, v))
+
     train = PreprocessedDataset()
     test = PreprocessedDataset()
 
@@ -98,6 +105,7 @@ def main():
     ]), trigger=log_interval)
     trainer.extend(extensions.ProgressBar(update_interval=log_interval[0]))
 
+    print('start training')
     trainer.run()
 
 

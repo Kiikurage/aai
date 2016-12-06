@@ -2,6 +2,7 @@ import chainer
 import chainer.functions as F
 import chainer.links as L
 from chainer import cuda
+from chainer import reporter
 import numpy as np
 
 
@@ -24,7 +25,7 @@ class SLPolicy(chainer.Chain):
             conv3=L.Convolution2D(16 * density, 16 * density, 4, stride=1, pad=1),
             norm3=L.BatchNormalization(16 * density),
             linear1=L.Linear(400 * density, 400 * density),
-            linear2=L.Linear(300 * density, 64)
+            linear2=L.Linear(400 * density, 64)
         )
 
     # noinspection PyUnresolvedReferences,PyCallingNonCallable
@@ -33,13 +34,17 @@ class SLPolicy(chainer.Chain):
         h2 = F.relu(self.norm2(self.conv2(h1), test=not train))
         h3 = F.relu(self.norm3(self.conv3(h2), test=not train))
         h4 = F.relu(self.linear1(h3))
-        scores = self.linear(h4)
+        scores = self.linear2(h4)
         return scores
 
     # noinspection PyCallingNonCallable
     def __call__(self, x, ply):
         scores = self.predict(x)
         self.loss = F.softmax_cross_entropy(scores, ply)
+        reporter.report({'loss': self.loss}, self)
+
+        self.accuracy = F.accuracy(scores, ply)
+        reporter.report({'accuracy': self.accuracy}, self)
 
         return self.loss
 
