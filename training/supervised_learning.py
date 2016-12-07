@@ -82,6 +82,7 @@ def main():
     if args.out:
         out = out + '_' + args.out
     out_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", out))
+    os.makedirs(out_dir, exist_ok=True)
 
     if args.gpu >= 0:
         cuda.get_device(args.gpu).use()
