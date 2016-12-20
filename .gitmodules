@@ -1,0 +1,3 @@
+[submodule "cpu/existing"]
+	path = cpu/existing
+	url = https://github.com/naokishibuya/reversi.git
