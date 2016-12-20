@@ -28,9 +28,9 @@ def stringify(b: Board) -> str:
     result += '    0   1   2   3   4   5   6   7 \n'
     result += '  ┌───┬───┬───┬───┬───┬───┬───┬───┐\n'
 
-    for y in range(0, 8):
-        result += '{} │'.format(y)
-        for x in range(0, 8):
+    for x in range(0, 8):
+        result += '{} │'.format(x)
+        for y in range(0, 8):
             if b[Color.Black, x, y]:
                 result += ' ● '
 
@@ -44,7 +44,7 @@ def stringify(b: Board) -> str:
 
         result += '\n'
 
-        if y < 7:
+        if x < 7:
             result += '  ├───┼───┼───┼───┼───┼───┼───┼───┤\n'
 
         else:
