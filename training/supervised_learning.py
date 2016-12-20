@@ -29,8 +29,43 @@ class PreprocessedDataset(dataset.DatasetMixin):
     def __len__(self):
         return len(self.data)
 
+    def data_augmentation(self, b, ply):
+        """
+        :param b: list or np.ndarray (board, shape = [2, 8, 8])
+        :param ply: int (next play index)
+        :return: board, play (applied augmentation)
+        """
+        ply_array = np.zeros(b.shape[1:], dtype=int)
+        ply_array[ply // 8, ply % 8] = 1
+
+        converted_b = np.array(b)
+        converted_ply_array = np.array(ply_array)
+
+        operation = [random.choice([0, 1]) for _ in range(3)]
+
+        if operation[0]:  # flip x
+            converted_b = converted_b[:, ::-1, :]
+            converted_ply_array = converted_ply_array[::-1, :]
+        if operation[1]:  # flip y
+            converted_b = converted_b[:, :, ::-1]
+            converted_ply_array = converted_ply_array[:, ::-1]
+        if operation[2]:  # rotation
+            converted_b[0] = np.rot90(converted_b[0])
+            converted_b[1] = np.rot90(converted_b[1])
+            converted_ply_array = np.rot90(converted_ply_array)
+
+        if ply == -1:
+            ret_ply = -1
+        else:
+            ply_indeces = np.where(converted_ply_array == 1)
+            ret_ply = int(ply_indeces[0] * 8 + ply_indeces[1])
+
+        ret_b = converted_b
+
+        return ret_b, ret_ply
+
     # noinspection PyUnresolvedReferences
-    def get_example(self, i):
+    def get_example(self, i, with_aug=True):
         plies = self.data[i]
 
         # 盤面を作る
@@ -44,11 +79,14 @@ class PreprocessedDataset(dataset.DatasetMixin):
             if ply == -1:
                 continue
 
-            y = ply // 8
-            x = ply % 8
+            x = ply // 8
+            y = ply % 8
             b = board.put(b, color, x, y)
 
         color, ply = plies[n]
+
+        if with_aug:
+            b, ply = self.data_augmentation(b, ply)
 
         res = board.to_state(b, color, n)
 
