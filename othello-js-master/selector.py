@@ -19,5 +19,7 @@ def selectMove(board_strings,moves,current_player):
 
     print(board)
 
-
+    #TODO
+    #movesは打てる場所を表すリスト
+    #最適な打ち手を求めて、インデックスを返す
     return random.randint(0,len(moves)-1)
