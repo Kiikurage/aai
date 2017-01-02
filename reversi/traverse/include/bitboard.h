@@ -190,10 +190,143 @@ static PyObject *BitBoard_montecalro(BitBoard *self, PyObject *args) {
             }
 
             Summary s = summary(board);
-            if ((start_color == BLACK && s.black > s.white) ||
-                (start_color == WHITE && s.white > s.black)) {
-                buf_win_count[i_hand]++;
+            buf_win_count[i_hand] += start_color == BLACK ? s.black - s.white : s.white - s.black;
+        }
+    }
+
+    free(buf_x2);
+    free(buf_y2);
+
+    int best_win_count = buf_win_count[0];
+    int best_x = buf_x[0];
+    int best_y = buf_y[0];
+    for (int i_hand = 1; i_hand < n_valid_hands; i_hand++) {
+        if (best_win_count > buf_win_count[i_hand]) continue;
+
+        best_win_count = buf_win_count[i_hand];
+        best_x = buf_x[i_hand];
+        best_y = buf_y[i_hand];
+    }
+
+    free(buf_x);
+    free(buf_y);
+    free(buf_win_count);
+    return Py_BuildValue("(iii)", best_x, best_y, best_win_count);
+};
+
+static PyObject *BitBoard_montecalro_draw(BitBoard *self, PyObject *args) {
+    //引き分けを目指す
+    const Color start_color;
+    const int limit;
+    if (!PyArg_ParseTuple(args, "ii", &start_color, &limit)) return NULL;
+
+    int *buf_x = (int *) malloc(sizeof(int) * 64);
+    int *buf_y = (int *) malloc(sizeof(int) * 64);
+    int n_valid_hands = 0;
+    find_next(self->data, start_color, buf_x, buf_y, &n_valid_hands);
+
+    if (n_valid_hands == 0) return Py_BuildValue("(iii)", -1, -1, 0);
+
+    int *buf_win_count = (int *) calloc(sizeof(int), (size_t) n_valid_hands);
+    int *buf_x2 = (int *) malloc(sizeof(int) * 64);
+    int *buf_y2 = (int *) malloc(sizeof(int) * 64);
+
+    for (int i_hand = 0; i_hand < n_valid_hands; i_hand++) {
+
+        for (int i_try = 0; i_try < limit; i_try++) {
+            __m128 board = put_and_flip(self->data, start_color, buf_x[i_hand], buf_y[i_hand]);
+            int pass_count = 0;
+            Color current = other(start_color);
+            while (1) {
+                int n_valid_hands2 = 0;
+                find_next(board, current, buf_x2, buf_y2, &n_valid_hands2);
+
+                if (n_valid_hands2 == 0) {
+                    pass_count++;
+                    if (pass_count >= 2) break;
+
+                    current = other(current);
+                    continue;
+
+                } else {
+                    pass_count = 0;
+
+                    const int selected_hand = xor128() % n_valid_hands2;
+                    board = put_and_flip(board, current, buf_x2[selected_hand], buf_y2[selected_hand]);
+                    current = other(current);
+                }
             }
+
+            Summary s = summary(board);
+            buf_win_count[i_hand] += -(s.white - s.black) * (s.white - s.black);
+        }
+    }
+
+    free(buf_x2);
+    free(buf_y2);
+
+    int best_win_count = buf_win_count[0];
+    int best_x = buf_x[0];
+    int best_y = buf_y[0];
+    for (int i_hand = 1; i_hand < n_valid_hands; i_hand++) {
+        if (best_win_count > buf_win_count[i_hand]) continue;
+
+        best_win_count = buf_win_count[i_hand];
+        best_x = buf_x[i_hand];
+        best_y = buf_y[i_hand];
+    }
+
+    free(buf_x);
+    free(buf_y);
+    free(buf_win_count);
+    return Py_BuildValue("(iii)", best_x, best_y, best_win_count);
+};
+
+static PyObject *BitBoard_montecalro_negative(BitBoard *self, PyObject *args) {
+    //負けを目指す
+    const Color start_color;
+    const int limit;
+    if (!PyArg_ParseTuple(args, "ii", &start_color, &limit)) return NULL;
+
+    int *buf_x = (int *) malloc(sizeof(int) * 64);
+    int *buf_y = (int *) malloc(sizeof(int) * 64);
+    int n_valid_hands = 0;
+    find_next(self->data, start_color, buf_x, buf_y, &n_valid_hands);
+
+    if (n_valid_hands == 0) return Py_BuildValue("(iii)", -1, -1, 0);
+
+    int *buf_win_count = (int *) calloc(sizeof(int), (size_t) n_valid_hands);
+    int *buf_x2 = (int *) malloc(sizeof(int) * 64);
+    int *buf_y2 = (int *) malloc(sizeof(int) * 64);
+
+    for (int i_hand = 0; i_hand < n_valid_hands; i_hand++) {
+
+        for (int i_try = 0; i_try < limit; i_try++) {
+            __m128 board = put_and_flip(self->data, start_color, buf_x[i_hand], buf_y[i_hand]);
+            int pass_count = 0;
+            Color current = other(start_color);
+            while (1) {
+                int n_valid_hands2 = 0;
+                find_next(board, current, buf_x2, buf_y2, &n_valid_hands2);
+
+                if (n_valid_hands2 == 0) {
+                    pass_count++;
+                    if (pass_count >= 2) break;
+
+                    current = other(current);
+                    continue;
+
+                } else {
+                    pass_count = 0;
+
+                    const int selected_hand = xor128() % n_valid_hands2;
+                    board = put_and_flip(board, current, buf_x2[selected_hand], buf_y2[selected_hand]);
+                    current = other(current);
+                }
+            }
+
+            Summary s = summary(board);
+            buf_win_count[i_hand] += start_color == WHITE ? s.black - s.white : s.white - s.black;
         }
     }
 
@@ -251,6 +384,50 @@ static PyMethodDef BitBoard_methods[] = {
             "  Boardオブジェクト"
     },
     {"montecarlo", (PyCFunction) BitBoard_montecalro, METH_VARARGS,
+        "montecarlo(color, limit)\n"
+            "--\n"
+            "\n"
+            "モンテカルロ探索により、最善手を探索します。\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "color: int\n"
+            "  最初に指す色。0が黒、1が白を表す。\n"
+            "limit: int\n"
+            "  打ち切り時間。この時間をすぎると探索を打ち切ります。単位は秒です。"
+            "\n"
+            "Returns\n"
+            "-------\n"
+            "x : int\n"
+            "  探索結果のx座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
+            "y : int\n"
+            "  探索結果のy座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
+            "n : int\n"
+            "  完了した試行回数\n"
+    },
+    {"montecarlo_draw", (PyCFunction) BitBoard_montecalro_draw, METH_VARARGS,
+        "montecarlo(color, limit)\n"
+            "--\n"
+            "\n"
+            "モンテカルロ探索により、最善手を探索します。\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "color: int\n"
+            "  最初に指す色。0が黒、1が白を表す。\n"
+            "limit: int\n"
+            "  打ち切り時間。この時間をすぎると探索を打ち切ります。単位は秒です。"
+            "\n"
+            "Returns\n"
+            "-------\n"
+            "x : int\n"
+            "  探索結果のx座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
+            "y : int\n"
+            "  探索結果のy座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
+            "n : int\n"
+            "  完了した試行回数\n"
+    },
+    {"montecarlo_negative", (PyCFunction) BitBoard_montecalro_negative, METH_VARARGS,
         "montecarlo(color, limit)\n"
             "--\n"
             "\n"

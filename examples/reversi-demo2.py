@@ -17,6 +17,22 @@ def find_ply_montecarlo(b: board.Board, c: Color):
 
 
 # noinspection PyShadowingNames
+def find_ply_montecarlo_draw(b: board.Board, c: Color):
+    # noinspection PyUnresolvedReferences
+    bb = traverse.BitBoard(b)
+    x, y, _ = bb.montecarlo_draw(c, 1000)
+    return x, y
+
+
+# noinspection PyShadowingNames
+def find_ply_montecarlo_negative(b: board.Board, c: Color):
+    # noinspection PyUnresolvedReferences
+    bb = traverse.BitBoard(b)
+    x, y, _ = bb.montecarlo_negative(c, 1000)
+    return x, y
+
+
+# noinspection PyShadowingNames
 def find_ply_random(b: board.Board, c: Color):
     que = []
     for x in range(0, 8):
@@ -33,7 +49,9 @@ def find_ply_random(b: board.Board, c: Color):
 
 strategy_dict = {
     'random': find_ply_random,
-    'montecarlo': find_ply_montecarlo
+    'montecarlo': find_ply_montecarlo,
+    'montecarlo-draw': find_ply_montecarlo_draw,
+    'montecarlo-negative': find_ply_montecarlo_negative,
 }
 
 parser = argparse.ArgumentParser()
