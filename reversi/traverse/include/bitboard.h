@@ -170,7 +170,6 @@ static PyObject *BitBoard_montecalro(BitBoard *self, PyObject *args) {
             __m128 board = put_and_flip(self->data, start_color, buf_x[i_hand], buf_y[i_hand]);
             int pass_count = 0;
             Color current = other(start_color);
-
             while (1) {
                 int n_valid_hands2 = 0;
                 find_next(board, current, buf_x2, buf_y2, &n_valid_hands2);
@@ -185,8 +184,8 @@ static PyObject *BitBoard_montecalro(BitBoard *self, PyObject *args) {
                 } else {
                     pass_count = 0;
 
-                    const int selected_hands = xor128() % n_valid_hands2;
-                    board = put_and_flip(board, current, buf_x2[selected_hands], buf_y2[selected_hands]);
+                    const int selected_hand = xor128() % n_valid_hands2;
+                    board = put_and_flip(board, current, buf_x2[selected_hand], buf_y2[selected_hand]);
                     current = other(current);
                 }
             }
@@ -295,6 +294,9 @@ static int BitBoard_init(BitBoard *self, PyObject *args) {
 
             } else if (*(npy_bool *) PyArray_GETPTR3(board, 1, i / 8, i % 8)) {
                 BitFSet(&self->data, i / 8, i % 8, WHITE);
+
+            } else {
+                BitFSet(&self->data, i / 8, i % 8, EMPTY);
             }
         }
     }

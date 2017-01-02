@@ -17,6 +17,7 @@ static char init_flag = 0;
 
 uint32_t xor128(void) {
     if (!init_flag) {
+        init_flag = 1;
         uint32_t _data[4];
         FILE *fp;
         fp = fopen("/dev/urandom", "r");
@@ -27,6 +28,7 @@ uint32_t xor128(void) {
         z = _data[2] ^ z;
         w = _data[3] ^ w;
     };
+
     uint32_t t;
 
     t = x ^ (x << 11);

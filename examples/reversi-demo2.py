@@ -10,7 +10,7 @@ from reversi import Color, traverse, board
 def find_ply(b: board.Board, c: Color):
     # noinspection PyUnresolvedReferences
     bb = traverse.BitBoard(b)
-    x, y, _ = bb.montecarlo(c, 6)
+    x, y, _ = bb.montecarlo(c, 100)
     return x, y
 
 
