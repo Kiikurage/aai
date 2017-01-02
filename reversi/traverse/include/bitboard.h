@@ -71,7 +71,6 @@ static void find_next(__m128 board, const Color color, int *buf_x, int *buf_y, i
     // TODO bit演算で。
     char *tmp = calloc(sizeof(char), 64);
 
-#pragma omp parallel for
     for (int i = 0; i < 64; i++) {
         const int x = i / 8;
         const int y = i % 8;
@@ -222,7 +221,6 @@ static PyObject *BitBoard_to_board(BitBoard *self) {
     PyArrayObject *result = (PyArrayObject *) PyArray_SimpleNew(3, ((npy_intp[3]) {2, 8, 8}), NPY_BOOL);
     PyArray_FILLWBYTE(result, NPY_FALSE);
 
-#pragma omp parallel for
     for (int i = 0; i < 64; i++) {
         int cell = BitGet(&self->data, i / 8, i % 8);
         if (cell == BLACK) {
@@ -287,7 +285,6 @@ static int BitBoard_init(BitBoard *self, PyObject *args) {
     if (!PyArg_ParseTuple(args, "O", &board)) return -1;
 
     if (board) {
-#pragma omp parallel for
         for (int i = 0; i < 64; i++) {
             if (*(npy_bool *) PyArray_GETPTR3(board, 0, i / 8, i % 8)) {
                 BitFSet(&self->data, i / 8, i % 8, BLACK);

@@ -6,7 +6,7 @@ import os
 is_debug = int(os.environ.get('DEBUG', '0')) == 1
 is_profile = int(os.environ.get('PROFILE', '0')) == 1
 
-extra_args = ['-std=c11', '-Wall', '-march=native', '-fopenmp']
+extra_args = ['-std=c11', '-Wall', '-march=native']
 libraries = []
 
 if is_debug:
@@ -21,10 +21,10 @@ if is_profile:
         extra_args.remove('-O3')
 
     if '-O0' not in extra_args:
-        extra_args +=['-O0']
+        extra_args += ['-O0']
 
     if '-g3' not in extra_args:
-        extra_args +=['-g3']
+        extra_args += ['-g3']
 
 extension = Extension('reversi.traverse.traverse',
                       include_dirs=['./reversi/traverse/include'],
