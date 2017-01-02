@@ -24,4 +24,4 @@ include_directories("./include")
 add_executable(.
         src/traverse.c include/traverse.h
         include/bitboard.h
-        include/macro.h )
+        include/macro.h include/xorshift.h)
