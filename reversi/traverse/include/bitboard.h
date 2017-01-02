@@ -12,9 +12,10 @@
 #include <structmember.h>
 #include <macro.h>
 
-const int EMPTY = 0b00;
-const int BLACK = 0b01;
-const int WHITE = 0b10;
+typedef char Color;
+const Color EMPTY = 0b00;
+const Color BLACK = 0b01;
+const Color WHITE = 0b10;
 
 typedef struct {
     PyObject_HEAD
@@ -25,7 +26,127 @@ static void BitBoard_dealloc(BitBoard *self) {
     //Nothing To Do.
 }
 
+static PyObject *BitBoard_to_board(BitBoard *self) {
+    PyArrayObject *result = (PyArrayObject *) PyArray_SimpleNew(3, ((npy_intp[3]) {2, 8, 8}), NPY_BOOL);
+    PyArray_FILLWBYTE(result, NPY_FALSE);
+
+    for (int x = 0; x < 8; x++) {
+        for (int y = 0; y < 8; y++) {
+            if (BitCheck(&self->data, x, y, BLACK)) {
+                *(npy_bool *) PyArray_GETPTR3(result, 0, x, y) = NPY_TRUE;
+
+            } else if (BitCheck(&self->data, x, y, WHITE)) {
+                *(npy_bool *) PyArray_GETPTR3(result, 1, x, y) = NPY_TRUE;
+            }
+        }
+    }
+
+    return (PyObject *) result;
+};
+
+static __m128 put_and_flip(__m128 board, const Color color, const int x, const int y) {
+    // TODO bit演算で。
+
+    __m128 result = board;
+    const int other = color == BLACK ? WHITE : BLACK;
+
+    if (!BitCheck(&result, x, y, EMPTY)) return result;
+    BitFSet(&result, x, y, color);
+
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if (dx == 0 && dy == 0) continue;
+
+            int px = x + dx;
+            int py = y + dy;
+            if (px < 0 || px >= 8 || py < 0 || py >= 8 || !BitCheck(&result, px, py, other)) continue;
+
+            while (1) {
+                px += dx;
+                py += dy;
+
+                if (px < 0 || px >= 8 || py < 0 || py >= 8) break;
+
+                if (!BitCheck(&result, px, py, other)) {
+                    if (BitCheck(&result, px, py, color)) {
+                        while (1) {
+                            px -= dx;
+                            py -= dy;
+
+                            if (px == x && py == y) break;
+
+                            BitFSet(&result, px, py, color);
+                        }
+                    }
+                    break;
+                }
+            }
+        }
+    }
+
+    return result;
+};
+
+static __m64 find_next(__m128 board, const Color color) {
+    // TODO bit演算で。
+
+    __m64 result = _mm_setzero_si64();
+    const int other = color == BLACK ? WHITE : BLACK;
+
+    for (int x = 0; x < 8; x++) {
+        for (int y = 0; y < 8; y++) {
+            if (!BitCheck(&board, x, y, EMPTY)) continue;
+            char success = 0;
+
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    if (dx == 0 && dy == 0) continue;
+
+                    int px = x + dx;
+                    int py = y + dy;
+                    if (px < 0 || px >= 8 || py < 0 || py >= 8 || !BitCheck(&board, px, py, other)) continue;
+
+                    while (1) {
+                        px += dx;
+                        py += dy;
+
+                        if (px < 0 || px >= 8 || py < 0 || py >= 8) break;
+
+                        if (!BitCheck(&board, px, py, other)) {
+                            if (BitCheck(&board, px, py, color)) {
+                                success = 1;
+                                BitFSet8(&result, x * 8 + y, 1, 0b1);
+                            }
+                            break;
+                        }
+                    }
+
+                    if (success) break;
+                }
+                if (success) break;
+            }
+        }
+    }
+
+    return result;
+};
+
 static PyMethodDef BitBoard_methods[] = {
+    {"to_board", (PyCFunction) BitBoard_to_board, METH_NOARGS,
+        "to_board()\n"
+            "--\n"
+            "\n"
+            "convert BitBoard into normal Board\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "None\n"
+            "\n"
+            "Returns\n"
+            "-------\n"
+            "board : Board\n"
+            "  board object"
+    },
     {NULL}  // END Marker
 };
 
@@ -33,29 +154,25 @@ static PyMemberDef BitBoard_members[] = {
     {NULL}  // END Marker
 };
 
-static int BitBoard_init(BitBoard *self, PyObject *args, PyObject *kwds) {
+static int BitBoard_init(BitBoard *self, PyObject *args) {
     PyArrayObject *board;
 
-    static char *kwlist[] = {"board", NULL};
-
-    if (!PyArg_ParseTupleAndKeywords(args, kwds, "|O", kwlist, &board)) return -1;
+    if (!PyArg_ParseTuple(args, "O", &board)) return -1;
 
     if (board) {
-        int tmp[4] __attribute__((aligned(16))) = {0, 0, 0, 0};
-
         for (int x = 0; x < 8; x++) {
             for (int y = 0; y < 8; y++) {
-                if (*(char *) PyArray_GETPTR3(board, 0, x, y)) {
-                    BitSet(tmp, x, y, BLACK);
+                if (*(npy_bool *) PyArray_GETPTR3(board, 0, x, y)) {
+                    BitFSet(&self->data, x, y, BLACK);
 
-                } else if (*(char *) PyArray_GETPTR3(board, 1, x, y)) {
-                    BitSet(tmp, x, y, WHITE);
+                } else if (*(npy_bool *) PyArray_GETPTR3(board, 1, x, y)) {
+                    BitFSet(&self->data, x, y, WHITE);
                 }
             }
         }
-
-        self->data = _mm_load_ps((const float *) tmp);
     }
+
+    self->data = put_and_flip(self->data, BLACK, 2, 3);
 
     return 0;
 }

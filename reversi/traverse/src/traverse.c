@@ -12,7 +12,6 @@ static PyMethodDef methods[] = {
 static struct PyModuleDef Traverse = {PyModuleDef_HEAD_INIT, "traverse", "", -1, methods, NULL, NULL, NULL, NULL};
 
 PyMODINIT_FUNC PyInit_traverse(void) {
-    BitBoard_Type.tp_new = PyType_GenericNew;
     if (PyType_Ready(&BitBoard_Type) < 0)
         return NULL;
 
