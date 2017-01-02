@@ -31,3 +31,8 @@ python training/supervised_learning.py [-g GPU] [--out OUT_DIR] [--small] [--use
 - オセロAIの有名論文 Experiments: with Multi-ProbCut and a New High-Quality Evaluation Function for Othello
 - 強化学習オセロの有名論文 MOUSE(μ): A self-teaching algorithm that achieved master-strength at Othello 
 - AlphaGo : [Mastering the game of Go with deep neural networks and tree search](http://www.nature.com/nature/journal/v529/n7587/pdf/nature16961.pdf)
+
+
+## Cのモジュールについて
+
+`python setup.py build_ext --inplace` でビルドできます。
