@@ -1,5 +1,6 @@
 import numpy as np
 from .color import Color
+from .traverse import traverse
 
 Board = np.ndarray
 
