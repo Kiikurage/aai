@@ -1,5 +1,6 @@
 from flask import Flask, request, json
 import selector
+#from . import Selector
 
 app = Flask(__name__,static_folder='.',static_url_path='')
 
@@ -7,6 +8,11 @@ app = Flask(__name__,static_folder='.',static_url_path='')
 def home():
     print("return index.html")
     return app.send_static_file('index.html')
+
+@app.route('/initGame', methods=['POST'])
+def initGame():
+    return ""
+
 
 @app.route('/getMove', methods=['POST'])
 def face_info():
