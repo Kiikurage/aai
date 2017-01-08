@@ -1,14 +1,26 @@
-import random
+import random,sys,os
 import numpy as np
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from reversi import board
 
 class Selector:
     #TODO 持つべきは過去の手数の履歴、と現在の状況
     def __init__(self,board_strings,moves,current_player):
         self.count = 0
         self.moves_history = []
+    def selectNextMove(*arg):
+        return null
+
+#def init():
 
 
-def selectMove(board_strings,moves,current_player):
+def selectMove(gameTree):
+    board_strings = gameTree["board"]
+    moves = gameTree["moves"]
+    current_player = gameTree["player"]
+    count = gameTree["count"]
+
     players = ["black","white"]
     board = np.zeros((2,8,8))
 

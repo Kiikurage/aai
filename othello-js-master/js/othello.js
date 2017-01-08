@@ -636,7 +636,6 @@ var othello = {};
     return {
       findTheBestMove: function (gameTree) {
         //Modify for AAI program
-        //TODO call python api to find the move
 
         $.ajax({
             url: '/getMove',

@@ -1,6 +1,6 @@
 from flask import Flask, request, json
 import selector
-#from . import Selector
+import sys
 
 app = Flask(__name__,static_folder='.',static_url_path='')
 
@@ -21,10 +21,14 @@ def face_info():
         print(request.headers['Content-Type'])
         return json.jsonify(res='error'), 400
 
-    #print request.jso
     gameTree = request.get_json()
-    #print(posted_data["test_value"])
-    bestMove = selector.selectMove(gameTree["board"],gameTree["moves"],gameTree["player"])
+    print(gameTree)
+    print(hasattr(gameTree,"count"))
+    if hasattr(gameTree,"count"):
+        if getattr(gameTree,"count") == 1:
+            selector.init()
+    bestMove = selector.selectMove(gameTree)
+    #bestMove = selector.selectMove(gameTree["board"],gameTree["moves"],gameTree["player"],gameTree["count"])
     return json.jsonify(index=bestMove)
 
 '''
