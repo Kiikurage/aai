@@ -89,7 +89,13 @@ class SLPolicy(chainer.Chain):
     def act(self, b, color, turn, temperature=1):
         x = board.to_state(b, color, turn)
         x = chainer.Variable(self.xp.array([x], 'float32'), volatile=True)
-        scores = self.predict(x)
-        pred = softmax(cuda.to_cpu(scores.data), T=temperature)
-        action = np.random.choice(64, p=pred[0])
+        scores = self.predict(x, False)
+        candidate = np.argsort(-cuda.to_cpu(scores.data[0]))
+        action = -1
+        for ply in candidate:
+            if board.is_valid(b, color, ply//8, ply%8):
+                action = ply
+                break
+        # pred = softmax(cuda.to_cpu(scores.data), T=temperature)
+        # action = np.random.choice(64, p=pred[0])
         return action
