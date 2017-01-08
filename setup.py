@@ -5,6 +5,7 @@ import os
 
 is_debug = int(os.environ.get('DEBUG', '0')) == 1
 is_profile = int(os.environ.get('PROFILE', '0')) == 1
+is_parallel = int(os.environ.get('PARALLEL', '0')) == 1
 
 extra_args = ['-std=c11', '-Wall', '-march=native']
 libraries = []
@@ -14,6 +15,9 @@ if is_debug:
 
 else:
     extra_args += ['-O3']
+
+if is_parallel:
+	extra_args += ['-fopenmp']
 
 if is_profile:
     extra_args += ['-lprofiler']
