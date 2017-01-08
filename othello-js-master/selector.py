@@ -32,6 +32,9 @@ def selectMove(gameTree, policy):
         player = [1 if color==player else 0 for color in board_strings]
         board[i] = np.array(player).reshape(8,8)
 
+
+
+    #TODO passされたときにturn数を数えられているか確認
     color = players.index(current_player)
     turn = count*2 - 1 + color
 
