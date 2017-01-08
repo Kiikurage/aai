@@ -13,7 +13,7 @@
 
 ## Supervised Learning from Kifu
 
-```python
+```
 python training/supervised_learning.py [-g GPU] [--out OUT_DIR] [--small] [--use_bn]
 ```
 
