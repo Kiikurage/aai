@@ -1,9 +1,15 @@
 from flask import Flask, request, json
+from chainer import serializers
+import sys, os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from models import SLPolicy
 import selector
 
-import sys
-
 app = Flask(__name__,static_folder='.',static_url_path='')
+policy = SLPolicy()
+serializers.load_hdf5('../sl_policy_0.model', policy)
 
 @app.route('/')
 def home():
@@ -28,8 +34,11 @@ def face_info():
     if hasattr(gameTree,"count"):
         if getattr(gameTree,"count") == 1:
             selector.init()
-    bestMove = selector.selectMove(gameTree)
+    global policy
+    bestMove = selector.selectMove(gameTree, policy)
     #bestMove = selector.selectMove(gameTree["board"],gameTree["moves"],gameTree["player"],gameTree["count"])
+
+
     return json.jsonify(index=bestMove)
 
 '''
