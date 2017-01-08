@@ -9,7 +9,7 @@ import selector
 
 app = Flask(__name__,static_folder='.',static_url_path='')
 policy = SLPolicy()
-serializers.load_hdf5('../sl_policy_0.model', policy)
+serializers.load_hdf5('sl_policy_0.model', policy)
 
 @app.route('/')
 def home():
