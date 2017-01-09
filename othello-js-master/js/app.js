@@ -1,3 +1,4 @@
+var moveCount = 0;
 (function (O) {
   'use strict';
 
@@ -76,11 +77,10 @@
 
   var minimumDelayForAI = 500;  // milliseconds
 
-  function getFuga(gameTree,index){
-      return gameTree.moves[index];
-  }
   function chooseMoveByAI(gameTree, ai) {
     $('#message').text('Now thinking...');
+    moveCount +=1;
+    gameTree.count = moveCount;
     $.ajax({
         url: '/getMove',
         type: 'POST',
@@ -187,6 +187,7 @@
       .attr('disabled', 'disabled');
     playerTable[O.BLACK] = makePlayer(blackPlayerType());
     playerTable[O.WHITE] = makePlayer(whitePlayerType());
+    O.makeInitialGameTree().count = 0;
     shiftToNewGameTree(O.makeInitialGameTree());
   }
 
