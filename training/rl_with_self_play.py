@@ -13,12 +13,11 @@ from reversi import board, Color
 from models import SLPolicy, RLPolicy
 
 
-def softmax(x, T=1):
-    y = x - x.max(axis=1, keepdims=True)
-    y = np.exp(y / T)
-    y /= y.sum(axis=1, keepdims=True)
+def softmax(x, mask, T=1):
+    y = x - x.max()
+    y = np.exp(y / T) * mask
+    y /= y.sum()
     return y
-
 
 def progress_report(start_time, epoch, batchsize, win_rate):
     duration = time.time() - start_time
@@ -103,7 +102,7 @@ def main():
                     break
 
                 scores = models[c].predict(models[c].xp.array(x_batch, 'float32'), False)
-                pred = softmax(cuda.to_cpu(scores.data))
+                scores = cuda.to_cpu(scores.data)
 
                 for i in range(batch_size//2):
                     # gameが終わったか判定
@@ -111,40 +110,28 @@ def main():
                         continue
 
                     b = x_batch[i][:2]
+                    valid_mask = x_batch[i][2].ravel()
 
-                    # 確率の高い順に打てるかどうかの判定
-                    # for ply in np.argsort(-pred[i]):
-                    for _ in range(10):
-                        ply = np.random.choice(64, p=pred[i])
+                    if valid_mask.sum() == 0:
+                        plies[(batch_size // 2) * player_color + i, turn] = -1
+                        pass_cnts[i] += 1
+                        x_batch[i] = board.to_state(b, 1 - c, turn + 1)
+                    else:
+                        pred = softmax(scores[i], mask=valid_mask,  T=1)
+                        ply = np.random.choice(64, p=pred)
+
                         x = ply // 8
                         y = ply % 8
-                        if board.is_valid(b, c, x, y):
-                            if c == player_color:
-                                states[(batch_size // 2) * player_color + i, turn, :, :, :] = x_batch[i]
-                                plies[(batch_size // 2) * player_color + i, turn] = ply
-                                ply_nums[(batch_size // 2) * player_color + i] += 1
+                        if not board.is_valid(b, c, x, y):
+                            raise ValueError('invalid ply')
+                        if c == player_color:
+                            states[(batch_size // 2) * player_color + i, turn, :, :, :] = x_batch[i]
+                            plies[(batch_size // 2) * player_color + i, turn] = ply
+                            ply_nums[(batch_size // 2) * player_color + i] += 1
 
-                            x_batch[i] = board.to_state(board.put(b, c, x, y), 1 - c, turn + 1)
-                            pass_cnts[i] = 0
-                            break
-                    # case of pass
-                    else:
-                        for ply in np.argsort(-pred[i]):
-                            x = ply // 8
-                            y = ply % 8
-                            if board.is_valid(b, c, x, y):
-                                if c == player_color:
-                                    states[(batch_size // 2) * player_color + i, turn, :, :, :] = x_batch[i]
-                                    plies[(batch_size // 2) * player_color + i, turn] = ply
-                                    ply_nums[(batch_size // 2) * player_color + i] += 1
+                        x_batch[i] = board.to_state(board.put(b, c, x, y), 1 - c, turn + 1)
+                        pass_cnts[i] = 0
 
-                                x_batch[i] = board.to_state(board.put(b, c, x, y), 1 - c, turn + 1)
-                                pass_cnts[i] = 0
-                                break
-                        else:
-                            plies[(batch_size // 2) * player_color + i, turn] = -1
-                            pass_cnts[i] += 1
-                            x_batch[i] = board.to_state(b, 1 - c, turn + 1)
                 c = 1 - c
                 turn += 1
 
