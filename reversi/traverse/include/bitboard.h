@@ -437,8 +437,10 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
                 buf_size *= 2;
             }
             Summary s = summary(cursor->data);
-                    even = even > -(s.black - s.white)*(s.black - s.white) ? -(s.black - s.white)*(s.black - s.white) : even;
-//                    even += s.white - s.black;
+//                    even = even > -(s.black - s.white)*(s.black - s.white) ? -(s.black - s.white)*(s.black - s.white) : even;
+                    even = (start_color == BLACK) ?
+                        (even < s.black - s.white ? even : s.black - s.white):
+                        (even < s.white - s.black ? even : s.white - s.black);
 
         } else {
             find_next(cursor->data, cursor->current_color, buf_x, buf_y, &n_valid_hands);
@@ -458,8 +460,10 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
                     }
 
                     Summary s = summary(cursor->data);
-//                    even += s.white - s.black;
-                    even = even > -(s.black - s.white)*(s.black - s.white) ? -(s.black - s.white)*(s.black - s.white) : even;
+//                    even = even > -(s.black - s.white)*(s.black - s.white) ? -(s.black - s.white)*(s.black - s.white) : even;
+                    even = (start_color == BLACK) ?
+                        (even < s.black - s.white ? even : s.black - s.white):
+                        (even < s.white - s.black ? even : s.white - s.black);
 
                 } else {
                     //普通のパス
