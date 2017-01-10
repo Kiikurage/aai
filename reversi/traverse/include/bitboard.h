@@ -331,7 +331,7 @@ static PyMemberDef BitBoard_members[] = {
 static int BitBoard_init(BitBoard *self, PyObject *args) {
     PyArrayObject *board = NULL;
 
-    if (!PyArg_ParseTuple(args, "|O", &board)) return -1;
+    if (!PyArg_ParseTuple(args, "O", &board)) return -1;
 
     if (board != NULL) {
         for (int i = 0; i < 64; i++) {
@@ -351,9 +351,8 @@ static int BitBoard_init(BitBoard *self, PyObject *args) {
 }
 
 static PyObject *BitBoard_new(PyTypeObject *type, PyObject *args, PyObject *kwds) {
-    BitBoard *self;
+    BitBoard *self = (BitBoard *) type->tp_alloc(type, 0);
 
-    self = (BitBoard *) type->tp_alloc(type, 0);
     if (self != NULL) {
         int *p_data = (int *) (&self->data);
         for (int i = 0; i < 4; i++) p_data[i] = 0xFFFFFFFF;
@@ -415,6 +414,7 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
     cursor->pass_count = 0;
     cursor->current_color = start_color;
     TraverseNode *end = cursor;
+    int even = 0;
 
     int buf_size = 1024;
     BitBoardData *bitboards = malloc(sizeof(BitBoardData) * buf_size);
@@ -436,6 +436,9 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
                 bitboards = tmp;
                 buf_size *= 2;
             }
+            Summary s = summary(cursor->data);
+                    even = even > -(s.black - s.white)*(s.black - s.white) ? -(s.black - s.white)*(s.black - s.white) : even;
+//                    even += s.white - s.black;
 
         } else {
             find_next(cursor->data, cursor->current_color, buf_x, buf_y, &n_valid_hands);
@@ -454,6 +457,10 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
                         buf_size *= 2;
                     }
 
+                    Summary s = summary(cursor->data);
+//                    even += s.white - s.black;
+                    even = even > -(s.black - s.white)*(s.black - s.white) ? -(s.black - s.white)*(s.black - s.white) : even;
+
                 } else {
                     //普通のパス
                     end->next = (TraverseNode *) malloc(sizeof(TraverseNode));
@@ -466,7 +473,7 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
                     end->current_color = other(cursor->current_color);
                 }
             } else {
-                //有効手あり　次の局面の列挙
+                //有効手あり 次の局面の列挙
                 for (int i = 0; i < n_valid_hands; i++) {
                     end->next = (TraverseNode *) malloc(sizeof(TraverseNode));
                     end = end->next;
@@ -485,18 +492,19 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args) {
         cursor = tmp;
     } while (cursor != 0);
 
-    free(buf_x);
-    free(buf_y);
+//        printf("even: %d / %d\n", even, num_bitboard);
+//    free(buf_x);
+//    free(buf_y);
+//
+//    PyObject *tuple = PyTuple_New(num_bitboard);
+//    for (int i = 0; i < num_bitboard; i++) {
+//        BitBoard *bb = (BitBoard *) PyObject_CallFunction((PyObject *) &BitBoard_Type, NULL);
+//        bb->data = bitboards[i];
+//        PyTuple_SetItem(tuple, i, (PyObject *) bb);
+//    }
+//
+//    free(bitboards);
 
-    PyObject *tuple = PyTuple_New(num_bitboard);
-    for (int i = 0; i < num_bitboard; i++) {
-        BitBoard *bb = (BitBoard *) PyObject_CallFunction((PyObject *) &BitBoard_Type, NULL);
-        bb->data = bitboards[i];
-        PyTuple_SetItem(tuple, i, (PyObject *) bb);
-    }
-
-    free(bitboards);
-
-    return tuple;
+    return Py_BuildValue("(ii)", even, num_bitboard);
 };
 #endif //REVERSI_BITBOARD_H
