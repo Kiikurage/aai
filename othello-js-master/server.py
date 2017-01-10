@@ -7,14 +7,17 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from models import SLPolicy
 import selector
 
-app = Flask(__name__,static_folder='.',static_url_path='')
+app = Flask(__name__, static_folder='.', static_url_path='')
+policy_path = '/home/mil/fukuta/work_space/aai/runs/0108_final/models/'
 policy = SLPolicy()
-serializers.load_hdf5('sl_policy_0.model', policy)
+serializers.load_hdf5(policy_path + 'sl_policy_10.model', policy)
+
 
 @app.route('/')
 def home():
     print("return index.html")
     return app.send_static_file('index.html')
+
 
 @app.route('/initGame', methods=['POST'])
 def initGame():
@@ -30,20 +33,20 @@ def face_info():
 
     gameTree = request.get_json()
     print(gameTree)
-    print(hasattr(gameTree,"count"))
-    if hasattr(gameTree,"count"):
-        if getattr(gameTree,"count") == 1:
+    print(hasattr(gameTree, "count"))
+    if hasattr(gameTree, "count"):
+        if getattr(gameTree, "count") == 1:
             selector.init()
     global policy
     bestMove = selector.selectMove(gameTree, policy)
-    #bestMove = selector.selectMove(gameTree["board"],gameTree["moves"],gameTree["player"],gameTree["count"])
-
+    # bestMove = selector.selectMove(gameTree["board"],gameTree["moves"],gameTree["player"],gameTree["count"])
 
     return json.jsonify(index=bestMove)
+
 
 '''
 @app.route('/echo/<thing>')
 def echo(thing):
     return thing
 '''
-app.run(port=8000,debug=True)
+app.run(host='0.0.0.0', port=8888, debug=True)

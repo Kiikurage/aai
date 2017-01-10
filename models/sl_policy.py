@@ -6,14 +6,22 @@ from chainer import reporter
 import numpy as np
 
 import os, sys
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from reversi import board
 
 
-def softmax(x, T):
+def batch_softmax(x, T):
     y = x - x.max(axis=1, keepdims=True)
     y = np.exp(y / T)
     y /= y.sum(axis=1, keepdims=True)
+    return y
+
+
+def softmax(x, mask, T=1):
+    y = x - x.max()
+    y = np.exp(y / T) * mask
+    y /= y.sum()
     return y
 
 
@@ -86,16 +94,11 @@ class SLPolicy(chainer.Chain):
             return np.argmax(cuda.to_cpu(scores.data), axis=1)
 
     # noinspection PyCallingNonCallable
-    def act(self, b, color, turn, temperature=1):
-        x = board.to_state(b, color, turn)
-        x = chainer.Variable(self.xp.array([x], 'float32'), volatile=True)
+    def act(self, b, color, turn, temperature=1.):
+        state = board.to_state(b, color, turn)
+        x = chainer.Variable(self.xp.array([state], 'float32'), volatile=True)
         scores = self.predict(x, False)
-        candidate = np.argsort(-cuda.to_cpu(scores.data[0]))
-        action = -1
-        for ply in candidate:
-            if board.is_valid(b, color, ply//8, ply%8):
-                action = ply
-                break
-        # pred = softmax(cuda.to_cpu(scores.data), T=temperature)
-        # action = np.random.choice(64, p=pred[0])
+        pred = softmax(cuda.to_cpu(scores.data[0]), mask=state[2].ravel(), T=1)
+        action = np.random.choice(64, p=pred)
+
         return action
