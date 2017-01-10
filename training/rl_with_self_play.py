@@ -69,7 +69,7 @@ def main():
             f.write('{} = {}\n'.format(k, v))
 
     # optimizer
-    optimizer = chainer.optimizers.Adam()
+    optimizer = chainer.optimizers.Adam(alpha=1e-4)
     optimizer.setup(player_model)
 
     # start training
@@ -117,7 +117,8 @@ def main():
                         pass_cnts[i] += 1
                         x_batch[i] = board.to_state(b, 1 - c, turn + 1)
                     else:
-                        if b[0:2].sum() >= 64 - 12:
+                        stone_cnt = b[0:2].sum()
+                        if c == player_color and stone_cnt >= 64 - 12:
                             # 残り12手は探索で。
                             best_rate = -float("Infinity")
                             best_x = -1
@@ -126,7 +127,7 @@ def main():
                             for x in range(8):
                                 for y in range(8):
                                     if board.is_valid(b, c, x, y):
-                                        a, total = traverse.BitBoard(board.put(b, c, x, y)).traverse(c, int(64 - n))
+                                        a, total = traverse.BitBoard(board.put(b, c, x, y)).traverse(c, int(64 - stone_cnt))
                                         if 1.0 * a > best_rate:
                                             best_rate = 1.0 * a
                                             best_x = x
@@ -135,7 +136,7 @@ def main():
                             ply = best_x * 8 + best_y
 
                         else:
-                            pred = softmax(scores[i], mask=valid_mask, T=1)
+                            pred = softmax(scores[i].astype(np.float64), mask=valid_mask, T=1)
                             ply = np.random.choice(64, p=pred)
 
                             if c == player_color:
@@ -146,6 +147,9 @@ def main():
                         x = ply // 8
                         y = ply % 8
                         if not board.is_valid(b, c, x, y):
+                            print(valid_mask)
+                            print(scores[i])
+                            print(softmax(scores[i], mask=valid_mask, T=1))
                             raise ValueError('invalid ply')
 
                         x_batch[i] = board.to_state(board.put(b, c, x, y), 1 - c, turn + 1)
