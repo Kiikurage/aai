@@ -530,26 +530,33 @@ var othello = {};
   };
 
   function makeAI(playerType) {
-    if (playerType in externalAITable) {
-      return externalAITable[playerType];
-    } else {
-      var tokens = playerType.split('-');
-      var aiType = tokens[0];
-      var level = parseInt(tokens[1]);
-      var extras = tokens.slice(2);
-      var scorePosition = scorePositions[aiType];
-      if (scorePosition !== undefined) {
-        return makeScoreBasedAI({
-          level: level,
-          scorePosition: scorePosition
-        });
-      } else {
-        return aiMakers[aiType]({
-          level: level,
-          extras: extras
-        });
-      }
+    if (playerType == "cnn"){
+        return {"cnn":1}
+    }else{
+        if (playerType in externalAITable) {
+          return externalAITable[playerType];
+        } else {
+          var tokens = playerType.split('-');
+          var aiType = tokens[0];
+          var level = parseInt(tokens[1]);
+          var extras = tokens.slice(2);
+          var scorePosition = scorePositions[aiType];
+
+          if (scorePosition !== undefined) {
+            return makeScoreBasedAI({
+              level: level,
+              scorePosition: scorePosition
+            });
+          } else {
+
+            return aiMakers[aiType]({
+              level: level,
+              extras: extras
+            });
+          }
+        }
     }
+
   }
 
 
@@ -633,32 +640,19 @@ var othello = {};
   };
 
   function makeScoreBasedAI(config) {
-    return {
-      findTheBestMove: function (gameTree) {
-        //Modify for AAI program
-
-        $.ajax({
-            url: '/getMove',
-            type: 'POST',
-            data: JSON.stringify(gameTree),
-            dataType: 'json',
-            contentType: 'application/json'
-        })
-        .then(function(data, textStatus, jqXHR) {
-            console.log("done");
-            console.log(data);
-            return gameTree.moves[getRandomInt(0,gameTree.moves.length-1)];
-            //return responded_data = gameTree.moves[data["index"]];
-        })
-        .fail(function(jqXHR, textStatus, errorThrown) {
-                console.log("failed");});
-
-
-        console.log("random");
-
-        //return gameTree.moves[getRandomInt(0,gameTree.moves.length-1)];
-      }
-    };
+      return {
+        findTheBestMove: function (gameTree) {
+          var ratings = calculateMaxRatings(
+            limitGameTreeWithFeasibleDepth(gameTree, config.level),
+            gameTree.player,
+            Number.MIN_VALUE,
+            Number.MAX_VALUE,
+            config.scorePosition
+          );
+          var maxRating = Math.max.apply(null, ratings);
+          return gameTree.moves[ratings.indexOf(maxRating)];
+        }
+      };
   }
   function getRandomInt(min, max) {
       return Math.floor( Math.random() * (max - min + 1) ) + min;

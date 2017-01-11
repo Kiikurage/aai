@@ -79,32 +79,60 @@ var moveCount = 0;
 
   function chooseMoveByAI(gameTree, ai) {
     $('#message').text('Now thinking...');
-    moveCount +=1;
-    gameTree.count = moveCount;
-    $.ajax({
-        url: '/getMove',
-        type: 'POST',
-        data: JSON.stringify(gameTree),
-        dataType: 'json',
-        contentType: 'application/json'
-    })
-    .then(function(data, textStatus, jqXHR) {
-        console.log(data);
 
-        var start = Date.now();
-        if(data["index"]>-1){
-            var newGameTree = O.force(gameTree.moves[data["index"]].gameTreePromise);
-        }else{
-            console.log("sended data is wrong")
-        }
+    var player_type = gameTree.player + "-player-type";
+    console.log($('#'+player_type).val());
+    var ai_type = $('#'+player_type).val();
 
-        var end = Date.now();
-        var delta = end - start;
-        shiftToNewGameTree(newGameTree);
-    })
-    .fail(function(jqXHR, textStatus, errorThrown) {
-            console.log("failed");});
-  }
+    if(ai_type == "cnn"){
+        moveCount +=1;
+        gameTree.count = moveCount;
+        $.ajax({
+            url: '/getMove',
+            type: 'POST',
+            data: JSON.stringify(gameTree),
+            dataType: 'json',
+            contentType: 'application/json'
+        })
+        .then(function(data, textStatus, jqXHR) {
+            console.log(data);
+
+            var start = Date.now();
+            if(data["index"]>-1){
+                var newGameTree = O.force(gameTree.moves[data["index"]].gameTreePromise);
+            }else{
+                console.log("sended data is wrong")
+            }
+
+            var end = Date.now();
+            var delta = end - start;
+            shiftToNewGameTree(newGameTree);
+        })
+        .fail(function(jqXHR, textStatus, errorThrown) {
+                console.log("failed");});
+    }else{
+        setTimeout(
+          function () {
+            var start = Date.now();
+            var newGameTree = O.force(ai.findTheBestMove(gameTree).gameTreePromise);
+            var end = Date.now();
+            var delta = end - start;
+            setTimeout(
+              function () {
+                shiftToNewGameTree(newGameTree);
+              },
+              Math.max(minimumDelayForAI - delta, 1)
+            );
+          },
+          1
+        );
+
+
+
+
+
+      }
+    }
 
   function showWinner(board) {
     var r = O.judge(board);
