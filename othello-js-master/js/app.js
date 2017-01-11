@@ -84,7 +84,7 @@ var moveCount = 0;
     console.log($('#'+player_type).val());
     var ai_type = $('#'+player_type).val();
 
-    if(ai_type == "cnn"){
+    if(ai_type == "simpleCount-131072"){
         moveCount +=1;
         gameTree.count = moveCount;
         $.ajax({
