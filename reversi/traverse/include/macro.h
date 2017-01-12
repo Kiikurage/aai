@@ -11,5 +11,12 @@
 #define BitGet(board, x, y)         BitGet8(board, ((x)*8+(y))*2, 2)
 #define BitCheck(board, x, y, bit) (BitGet(board, x, y) == bit)
 
+typedef char Color;
+const Color EMPTY = 0b11;
+const Color BLACK = 0b00;
+const Color WHITE = 0b01;
+
+#define other(c) ((c)==BLACK?WHITE:BLACK)
+
 #endif //REVERSI_MACRO_H
 

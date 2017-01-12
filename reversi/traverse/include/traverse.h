@@ -11,6 +11,6 @@
 #include <x86intrin.h>
 #include <structmember.h>
 #include <macro.h>
-#include <bitboard.h>
+#include <bitboard_core.h>
 
 #endif //REVERSI_TRAVERSE_H
