@@ -271,36 +271,30 @@ static PyObject *BitBoard_get_score_prob2(BitBoard *self, PyObject *args) {
     int num_start_stone = 52;
     int num_branch = 1000;
     if (!PyArg_ParseTuple(args, "iii", &self_color, &num_start_stone, &num_branch)) return NULL;
-    PyObject *boards_tuple = PyTuple_New(num_samples);
-    PyObject *probs_tuple = PyTuple_New(num_samples);
+
+    PyObject *boards = PyArray_SimpleNew(4, ((npy_intp[4]) {num_samples, 2, 8, 8}), NPY_BOOL);
+    PyArray_FILLWBYTE(boards, NPY_FALSE);
+
+    PyObject *probs = PyArray_SimpleNew(2, ((npy_intp[2]) {num_samples, 127}), NPY_FLOAT);
+    float *p_probs = (float *) ((PyArrayObject *) probs)->data;
 
 #pragma omp parallel for
     for (int i = 0; i < num_samples; i++) {
-        float prob[127];
 
-        BitBoardData data = get_score_prob2(prob, self_color, num_start_stone, num_branch);
-        PyArrayObject *board = (PyArrayObject *) PyArray_SimpleNew(3, ((npy_intp[3]) {2, 8, 8}), NPY_BOOL);
-        PyArray_FILLWBYTE(board, NPY_FALSE);
+        BitBoardData data = get_score_prob2(&p_probs[127 * i], self_color, num_start_stone, num_branch);
+
         for (int j = 0; j < 64; j++) {
             int cell = BitGet(&data, j / 8, j % 8);
             if (cell == BLACK) {
-                *(npy_bool *) PyArray_GETPTR3(board, 0, j / 8, j % 8) = NPY_TRUE;
+                *(npy_bool *) PyArray_GETPTR4(boards, i, 0, j / 8, j % 8) = NPY_TRUE;
 
             } else if (cell == WHITE) {
-                *(npy_bool *) PyArray_GETPTR3(board, 1, j / 8, j % 8) = NPY_TRUE;
+                *(npy_bool *) PyArray_GETPTR4(boards, i, 1, j / 8, j % 8) = NPY_TRUE;
             }
         }
-
-        PyObject *prob_tuple = PyTuple_New(127);
-        for (int j = 0; j < 127; j++) {
-            PyTuple_SET_ITEM(prob_tuple, j, PyFloat_FromDouble(prob[j]));
-        }
-
-        PyTuple_SET_ITEM(boards_tuple, i, (PyObject *) board);
-        PyTuple_SET_ITEM(probs_tuple, i, prob_tuple);
     }
 
-    return Py_BuildValue("(OO)", boards_tuple, probs_tuple);
+    return Py_BuildValue("(OO)", boards, probs);
 }
 
 #endif //REVERSI_BITBOARD_H
