@@ -34,11 +34,7 @@ def find_ply_montecarlo_draw(b: board.Board, c: Color):
 
 # noinspection PyShadowingNames
 def find_ply_random(b: board.Board, c: Color):
-    que = []
-    for x in range(0, 8):
-        for y in range(0, 8):
-            if board.is_valid(b, c, x, y):
-                que.append((x, y))
+    que = traverse.BitBoard(b).find_next(c)
 
     if len(que) == 0:
         return -1, -1

@@ -58,12 +58,13 @@ static PyObject *BitBoard_montecalro(BitBoard *self, PyObject *args, PyObject *k
 
 static PyObject *BitBoard_get_score_prob(BitBoard *self, PyObject *args) {
     const Color start_color;
+    const Color self_color;
     int num_branch = 1000;
-    if (!PyArg_ParseTuple(args, "ii", &start_color, &num_branch)) return NULL;
+    if (!PyArg_ParseTuple(args, "iii", &start_color, &self_color, &num_branch)) return NULL;
 
     float prob[127];
 
-    get_score_prob(self->data, prob, start_color, num_branch);
+    get_score_prob(self->data, prob, start_color, self_color, num_branch);
     PyObject *res = PyTuple_New(127);
 
     for (int i = 0; i < 127; i++) {
@@ -73,8 +74,10 @@ static PyObject *BitBoard_get_score_prob(BitBoard *self, PyObject *args) {
     return res;
 }
 
+static PyObject *BitBoard_get_score_prob2(BitBoard *self, PyObject *args);
+
 static PyMethodDef BitBoard_methods[] = {
-    {"to_board",   (PyCFunction) BitBoard_to_board,   METH_NOARGS,
+    {"to_board",        (PyCFunction) BitBoard_to_board,        METH_NOARGS,
         "to_board()\n"
             "--\n"
             "\n"
@@ -89,7 +92,7 @@ static PyMethodDef BitBoard_methods[] = {
             "board : Board\n"
             "  Boardオブジェクト"
     },
-    {"find_next", (PyCFunction) BitBoard_find_next, METH_VARARGS,
+    {"find_next",       (PyCFunction) BitBoard_find_next,       METH_VARARGS,
         "find_next(color)\n"
             "--\n"
             "\n"
@@ -105,7 +108,7 @@ static PyMethodDef BitBoard_methods[] = {
             "hands: Tuple(int, int)\n"
             "  させる手のタプル\n"
     },
-    {"montecarlo", (PyCFunction) BitBoard_montecalro, METH_VARARGS | METH_KEYWORDS,
+    {"montecarlo",      (PyCFunction) BitBoard_montecalro,      METH_VARARGS | METH_KEYWORDS,
         "montecarlo(color, num_branch, mode=1)\n"
             "--\n"
             "\n"
@@ -129,20 +132,52 @@ static PyMethodDef BitBoard_methods[] = {
             "n : int\n"
             "  完了した試行回数\n"
     },
-    {"get_score_prob", (PyCFunction) BitBoard_get_score_prob, METH_VARARGS,
-        "get_score_prob(color, num_branch, mode=1)\n"
+    {"get_score_prob",  (PyCFunction) BitBoard_get_score_prob,  METH_VARARGS,
+        "get_score_prob(start_color, self_color, num_branch)\n"
             "--\n"
             "\n"
-            "モンテカルロ探索により、与えられた盤面から終局状態を予想します。\n"
+            "与えられた盤面から終局状態を予想し、石数差の確率分布を返します。\n"
+            "相手はモンテカルロ法により勝ちを目指すものとし、\n"
+            "自分はランダムに手をうつことで、確率分布を計算します。\n"
             "\n"
             "Parameters\n"
             "----------\n"
-            "color: int\n"
+            "start_color: int\n"
             "  最初に指す色。0が黒、1が白を表す。\n"
+            "self_color: int\n"
+            "  自分の色。0が黒、1が白を表す。\n"
+            "num_branch: int\n"
+            "  探索分岐数\n"
             "\n"
             "Returns\n"
             "-------\n"
             "prob : Tuple(int, int...)\n"
+            "  確率。長さ127のタプルで、石数-64~64の終局状態の確率をそれぞれ表している。\n"
+    },
+    {"get_score_prob2", (PyCFunction) BitBoard_get_score_prob2, METH_VARARGS,
+        "get_score_prob2(num_samples, self_color, num_start_stone, num_branch)\n"
+            "--\n"
+            "\n"
+            "指定された個数の石が既に置かれた状態から、終局状態の石数の差を予想します。\n"
+            "相手はモンテカルロ法により勝ちを目指すものとし、\n"
+            "自分はランダムに手をうつことで、確率分布を計算します。\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "num_samples: int\n"
+            "  サンプル数。\n"
+            "self_color: int\n"
+            "  自分の色。0が黒、1が白を表す。\n"
+            "num_start_stone: int\n"
+            "  探索を開始する石の数\n"
+            "num_branch: int\n"
+            "  探索分岐数\n"
+            "\n"
+            "Returns\n"
+            "-------\n"
+            "board : Tuple(BitBoard...)\n"
+            "  指定された個数の石が置かれた状態。\n"
+            "prob : Tuple(int...)\n"
             "  確率。長さ127のタプルで、石数-64~64の終局状態の確率をそれぞれ表している。\n"
     },
     {NULL}  // END Marker
@@ -229,5 +264,43 @@ static PyTypeObject BitBoard_Type = {
     0,                             /* tp_alloc */
     BitBoard_new,                  /* tp_new */
 };
+
+static PyObject *BitBoard_get_score_prob2(BitBoard *self, PyObject *args) {
+    int num_samples = 1000;
+    const Color self_color;
+    int num_start_stone = 52;
+    int num_branch = 1000;
+    if (!PyArg_ParseTuple(args, "iii", &self_color, &num_start_stone, &num_branch)) return NULL;
+    PyObject *boards_tuple = PyTuple_New(num_samples);
+    PyObject *probs_tuple = PyTuple_New(num_samples);
+
+#pragma omp parallel for
+    for (int i = 0; i < num_samples; i++) {
+        float prob[127];
+
+        BitBoardData data = get_score_prob2(prob, self_color, num_start_stone, num_branch);
+        PyArrayObject *board = (PyArrayObject *) PyArray_SimpleNew(3, ((npy_intp[3]) {2, 8, 8}), NPY_BOOL);
+        PyArray_FILLWBYTE(board, NPY_FALSE);
+        for (int j = 0; j < 64; j++) {
+            int cell = BitGet(&data, j / 8, j % 8);
+            if (cell == BLACK) {
+                *(npy_bool *) PyArray_GETPTR3(board, 0, j / 8, j % 8) = NPY_TRUE;
+
+            } else if (cell == WHITE) {
+                *(npy_bool *) PyArray_GETPTR3(board, 1, j / 8, j % 8) = NPY_TRUE;
+            }
+        }
+
+        PyObject *prob_tuple = PyTuple_New(127);
+        for (int j = 0; j < 127; j++) {
+            PyTuple_SET_ITEM(prob_tuple, j, PyFloat_FromDouble(prob[j]));
+        }
+
+        PyTuple_SET_ITEM(boards_tuple, i, (PyObject *) board);
+        PyTuple_SET_ITEM(probs_tuple, i, prob_tuple);
+    }
+
+    return Py_BuildValue("(OO)", boards_tuple, probs_tuple);
+}
 
 #endif //REVERSI_BITBOARD_H
