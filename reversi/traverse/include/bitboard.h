@@ -219,7 +219,8 @@ MontecarloResult montecalro(BitBoardData data,
 void get_score_prob(BitBoardData data,
                     float *prob,
                     const Color start_color,
-                    const int num_branch) {
+                    const Color self_color,
+                    int const num_branch) {
 
     for (int i = 0; i < 127; i++) prob[i] = 0;
 
@@ -227,45 +228,103 @@ void get_score_prob(BitBoardData data,
     int buf_y[64];
     int num_valid_hands = 0;
 
-    find_next(data, start_color, buf_x, buf_y, &num_valid_hands);
-    if (num_valid_hands == 0) return;
+    for (int i_branch = 0; i_branch < num_branch; i_branch++) {
+        BitBoardData current_data = data;
+        int pass_count = 0;
+        Color current_color = start_color;
 
-    int num_results = 0;
+        while (1) {
+            if (current_color == self_color) {
 
-    for (int i_hand = 0; i_hand < num_valid_hands; i_hand++) {
-        for (int i_branch = 0; i_branch < num_branch; i_branch++) {
-            BitBoardData current_data = put_and_flip(data, start_color, buf_x[i_hand], buf_y[i_hand]);
-            int pass_count = 0;
-            Color current_color = other(start_color);
-
-            while (1) {
-                int buf_x2[64];
-                int buf_y2[64];
-                int num_valid_hands2 = 0;
-                find_next(current_data, current_color, buf_x2, buf_y2, &num_valid_hands2);
-
-                if (num_valid_hands2 == 0) {
+                //自分：ランダム
+                find_next(current_data, current_color, buf_x, buf_y, &num_valid_hands);
+                if (num_valid_hands == 0) {
                     pass_count++;
                     if (pass_count >= 2) break;
-
-                    current_color = other(current_color);
-                    continue;
 
                 } else {
                     pass_count = 0;
 
-                    const int selected_hand = xor128() % num_valid_hands2;
-                    current_data = put_and_flip(current_data, current_color, buf_x2[selected_hand], buf_y2[selected_hand]);
-                    current_color = other(current_color);
+                    const int selected_hand = xor128() % num_valid_hands;
+                    current_data = put_and_flip(current_data, current_color, buf_x[selected_hand], buf_y[selected_hand]);
                 }
+
+            } else {
+
+                //相手：勝ち目標モンテカルロ
+                MontecarloResult res = montecalro(current_data, current_color, 100, MONTECALRO_MODE_WIN);
+
+                if (res.best_x == -1) {
+                    pass_count++;
+                    if (pass_count >= 2) break;
+
+                } else {
+                    pass_count = 0;
+
+                    current_data = put_and_flip(current_data, current_color, res.best_x, res.best_y);
+                }
+
             }
 
-            Summary s = summarize(current_data);
-            int delta = start_color == BLACK ? s.black - s.white : s.white - s.black;
-            prob[delta + 64] += 1;
-            num_results++;
+            current_color = other(current_color);
         }
+
+        Summary s = summarize(current_data);
+        int delta = self_color == BLACK ? s.black - s.white : s.white - s.black;
+        prob[delta + 64] += 1;
     }
 
-    for (int i = 0; i < 127; i++) prob[i] /= num_results;
+    for (int i = 0; i < 127; i++) prob[i] /= num_branch;
 };
+
+BitBoardData get_score_prob2(float *prob,
+                             const Color self_color,
+                             int const num_start_stone,
+                             int const num_branch) {
+
+    for (int i = 0; i < 127; i++) prob[i] = 0;
+
+    int buf_x[64];
+    int buf_y[64];
+    int num_valid_hands = 0;
+    BitBoardData current_data;
+    Color current_color;
+
+    BitBoardData BIT_BOARD_INITIAL;
+    for (int i = 0; i < 4; i++) ((int *)&BIT_BOARD_INITIAL)[i] = 0xFFFFFFFF;
+    BitFSet(&BIT_BOARD_INITIAL, 3, 3, WHITE);
+    BitFSet(&BIT_BOARD_INITIAL, 4, 4, WHITE);
+    BitFSet(&BIT_BOARD_INITIAL, 3, 4, BLACK);
+    BitFSet(&BIT_BOARD_INITIAL, 4, 3, BLACK);
+
+    while (1) {
+        int pass_count = 0;
+        int num_stone = 4;
+        current_color = BLACK;
+        current_data = BIT_BOARD_INITIAL;
+
+        while (num_stone < num_start_stone) {
+            find_next(current_data, current_color, buf_x, buf_y, &num_valid_hands);
+
+            if (num_valid_hands == 0) {
+                pass_count++;
+                if (pass_count >= 2) break;
+
+            } else {
+                pass_count = 0;
+
+                const int selected_hand = xor128() % num_valid_hands;
+                current_data = put_and_flip(current_data, current_color, buf_x[selected_hand], buf_y[selected_hand]);
+                num_stone++;
+            }
+
+            current_color = other(current_color);
+        }
+
+        if (num_stone >= num_start_stone) break;
+    }
+
+    get_score_prob(current_data, prob, current_color, self_color, num_branch);
+
+    return current_data;
+}
