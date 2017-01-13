@@ -22,6 +22,9 @@ include_directories("${PYTHON_DIR}/include/python3.5m")
 
 include_directories("./include")
 add_executable(.
-        src/traverse.c include/traverse.h
+        src/traverse.c
+        include/traverse.h
         include/bitboard.h
-        include/macro.h include/xorshift.h)
+        include/bitboard_core.h
+        include/macro.h
+        include/xorshift.h)
