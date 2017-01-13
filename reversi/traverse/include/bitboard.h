@@ -252,7 +252,7 @@ void get_score_prob(BitBoardData data,
             } else {
 
                 //相手：勝ち目標モンテカルロ
-                MontecarloResult res = montecalro(current_data, current_color, 100, MONTECALRO_MODE_WIN);
+                MontecarloResult res = montecalro(current_data, current_color, 10, MONTECALRO_MODE_WIN);
 
                 if (res.best_x == -1) {
                     pass_count++;
