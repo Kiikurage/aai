@@ -222,15 +222,17 @@ SearchResult traverse_search(BitBoardData start_data,
 
     if (hands1.n == 0) return (SearchResult) {-1, -1};
 
-    float max_min_score = -1e9f;
     int best_x = hands1.x[0];
     int best_y = hands1.y[0];
 
+    float *min_score = (float *) malloc(sizeof(float) * hands1.n);
+
+#pragma omp parallel for
     for (int i1 = 0; i1 < hands1.n; i1++) {
         TraverseNode *current_node = malloc(sizeof(TraverseNode));
         TraverseNode *last_node = current_node;
 
-        float min_score = 1e9;
+        min_score[i1] = -1e9f;
 
         current_node->data = put_and_flip(start_data, start_color, hands1.x[i1], hands1.y[i1]);
         current_node->color = other(start_color);
@@ -244,7 +246,7 @@ SearchResult traverse_search(BitBoardData start_data,
             if (hands2.n == 0) {
                 if (current_node->pass_count == 1) {
                     float current_score = evaluate(start_color, current_node->data, mode);
-                    min_score = current_score < min_score ? current_score : min_score;
+                    min_score[i1] = current_score < min_score[i1] ? current_score : min_score[i1];
 
                 } else {
                     TraverseNode *next = malloc(sizeof(TraverseNode));
@@ -273,11 +275,15 @@ SearchResult traverse_search(BitBoardData start_data,
             free(current_node);
             current_node = next;
         }
+    }
 
-        if (min_score > max_min_score) {
-            max_min_score = min_score;
-            best_x = hands1.x[i1];
-            best_y = hands1.y[i1];
+    float max_min_score = min_score[0];
+
+    for (int i = 1; i < hands1.n; i++) {
+        if (min_score[i] > max_min_score) {
+            max_min_score = min_score[i];
+            best_x = hands1.x[i];
+            best_y = hands1.y[i];
         }
     }
 
