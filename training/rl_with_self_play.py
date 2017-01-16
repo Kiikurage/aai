@@ -120,20 +120,8 @@ def main():
                         stone_cnt = b[0:2].sum()
                         if c == player_color and stone_cnt >= 64 - 12:
                             # 残り12手は探索で。
-                            best_rate = -float("Infinity")
-                            best_x = -1
-                            best_y = -1
-
-                            for x in range(8):
-                                for y in range(8):
-                                    if board.is_valid(b, c, x, y):
-                                        a, total = traverse.BitBoard(board.put(b, c, x, y)).traverse(c, int(64 - stone_cnt))
-                                        if 1.0 * a > best_rate:
-                                            best_rate = 1.0 * a
-                                            best_x = x
-                                            best_y = y
-
-                            ply = best_x * 8 + best_y
+                            x, y = traverse.BitBoard(board).traverse(c)
+                            ply = x * 8 + y
 
                         else:
                             pred = softmax(scores[i].astype(np.float64), mask=valid_mask, T=1)
