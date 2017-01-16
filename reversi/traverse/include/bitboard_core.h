@@ -26,19 +26,16 @@ static PyObject *BitBoard_to_board(BitBoard *self) {
     return (PyObject *) result;
 };
 
-static PyObject *BitBoard_find_next(BitBoard *self, PyObject *args, PyObject *keywds) {
-    int buf_x[64];
-    int buf_y[64];
-    int num_hands;
-
+static PyObject *BitBoard_find_next(BitBoard *self, PyObject *args) {
     const Color start_color;
     if (!PyArg_ParseTuple(args, "i", &start_color)) return NULL;
 
-    find_next(self->data, start_color, buf_x, buf_y, &num_hands);
-    PyObject *res = PyTuple_New(num_hands);
+    Hands hands;
+    find_next(self->data, start_color, &hands);
+    PyObject *res = PyTuple_New(hands.n);
 
-    for (int i = 0; i < num_hands; i++) {
-        PyTuple_SET_ITEM(res, i, Py_BuildValue("(ii)", buf_x[i], buf_y[i]));
+    for (int i = 0; i < hands.n; i++) {
+        PyTuple_SET_ITEM(res, i, Py_BuildValue("(ii)", hands.x[i], hands.y[i]));
     }
 
     return res;
@@ -47,13 +44,24 @@ static PyObject *BitBoard_find_next(BitBoard *self, PyObject *args, PyObject *ke
 static PyObject *BitBoard_montecalro(BitBoard *self, PyObject *args, PyObject *keywds) {
     const Color start_color;
     const int num_branch;
-    const MontecalroMode mode = MONTECALRO_MODE_WIN;
+    const SearchMode mode = SEARCH_MODE_WIN;
     static char *kwlist[] = {"color", "num_branch", "mode", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "ii|i", kwlist, &start_color, &num_branch, &mode)) return NULL;
 
-    MontecarloResult result = montecalro(self->data, start_color, num_branch, mode);
+    SearchResult result = montecalro_search(self->data, start_color, num_branch, mode);
 
-    return Py_BuildValue("(iii)", result.best_x, result.best_y, result.best_win_count);
+    return Py_BuildValue("(ii)", result.x, result.y);
+}
+
+static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args, PyObject *keywds) {
+    const Color start_color;
+    const SearchMode mode = SEARCH_MODE_WIN;
+    static char *kwlist[] = {"color", "mode", NULL};
+    if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|i", kwlist, &start_color, &mode)) return NULL;
+
+    SearchResult result = traverse_search(self->data, start_color, mode);
+
+    return Py_BuildValue("(ii)", result.x, result.y);
 }
 
 static PyObject *BitBoard_get_score_prob(BitBoard *self, PyObject *args) {
@@ -129,8 +137,26 @@ static PyMethodDef BitBoard_methods[] = {
             "  探索結果のx座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
             "y : int\n"
             "  探索結果のy座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
-            "n : int\n"
-            "  完了した試行回数\n"
+    },
+    {"traverse",        (PyCFunction) BitBoard_traverse,        METH_VARARGS,
+        "traverse(color, mode=1)\n"
+            "--\n"
+            "\n"
+            "全探索により、最善手を探索します。残り12手くらいからにしないと、時間がかかりすぎます。\n"
+            "\n"
+            "Parameters\n"
+            "----------\n"
+            "color: int\n"
+            "  最初に指す色。0が黒、1が白を表す。\n"
+            "mode: int\n"
+            "  目指す終局状態。mode=1: 勝ち, mode=2: 負け, mode=3: 引き分け"
+            "\n"
+            "Returns\n"
+            "-------\n"
+            "x : int\n"
+            "  探索結果のx座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
+            "y : int\n"
+            "  探索結果のy座標。引数colorで指定した指し手にとって、次に指すべき最善手。\n"
     },
     {"get_score_prob",  (PyCFunction) BitBoard_get_score_prob,  METH_VARARGS,
         "get_score_prob(start_color, self_color, num_branch)\n"

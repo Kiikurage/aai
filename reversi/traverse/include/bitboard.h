@@ -49,9 +49,15 @@ static BitBoardData put_and_flip(BitBoardData board, const Color color, const in
     return result;
 };
 
-static void find_next(BitBoardData data, const Color color, int *buf_x, int *buf_y, int *n_valid_hands) {
+typedef struct {
+    int n;
+    int x[64];
+    int y[64];
+} Hands;
+
+static void find_next(BitBoardData data, const Color color, Hands *hands) {
     // TODO bit演算で。
-    *n_valid_hands = 0;
+    hands->n = 0;
 
     for (int i = 0; i < 64; i++) {
         const int x = i / 8;
@@ -75,9 +81,9 @@ static void find_next(BitBoardData data, const Color color, int *buf_x, int *buf
                     if (BitCheck(&data, px, py, EMPTY)) break;
 
                     if (BitCheck(&data, px, py, color)) {
-                        buf_x[*n_valid_hands] = i / 8;
-                        buf_y[*n_valid_hands] = i % 8;
-                        (*n_valid_hands)++;
+                        hands->x[hands->n] = i / 8;
+                        hands->y[hands->n] = i % 8;
+                        hands->n++;
 
                         goto next;
                     }
@@ -114,106 +120,168 @@ static Summary summarize(BitBoardData board) {
     return summary;
 };
 
-static float evaluate_function_mode_win(Color start_color, Summary s) { return start_color == BLACK ? s.black - s.white : s.white - s.black; }
-
-static float evaluate_function_mode_lose(Color start_color, Summary s) { return start_color == WHITE ? s.black - s.white : s.white - s.black; }
-
-static float evaluate_function_mode_draw(Color start_color, Summary s) { return -(s.white - s.black) * (s.white - s.black); }
-
 typedef enum {
-    MONTECALRO_MODE_WIN = 1,
-    MONTECALRO_MODE_LOSE = 2,
-    MONTECALRO_MODE_DRAW = 3,
-} MontecalroMode;
+    SEARCH_MODE_WIN = 1,
+    SEARCH_MODE_LOSE = 2,
+    SEARCH_MODE_DRAW = 3,
+} SearchMode;
+
+static float evaluate_function_mode_win(Color start_color, Summary summary) { return start_color == BLACK ? summary.black - summary.white : summary.white - summary.black; }
+
+static float evaluate_function_mode_lose(Color start_color, Summary summary) { return start_color == WHITE ? summary.black - summary.white : summary.white - summary.black; }
+
+static float evaluate_function_mode_draw(Color start_color, Summary summary) { return -(summary.white - summary.black) * (summary.white - summary.black); }
+
+static float evaluate(Color start_color, BitBoardData data, SearchMode mode) {
+    switch (mode) {
+        case SEARCH_MODE_WIN:
+            return evaluate_function_mode_win(start_color, summarize(data));
+
+        case SEARCH_MODE_LOSE:
+            return evaluate_function_mode_lose(start_color, summarize(data));
+
+        case SEARCH_MODE_DRAW:
+        default:
+            return evaluate_function_mode_draw(start_color, summarize(data));
+    }
+}
 
 typedef struct {
-    int best_x;
-    int best_y;
-    int best_win_count;
-} MontecarloResult;
+    int x;
+    int y;
+} SearchResult;
 
-MontecarloResult montecalro(BitBoardData data,
-                            const Color start_color,
-                            const int num_branch,
-                            const MontecalroMode mode) {
+SearchResult montecalro_search(BitBoardData start_data,
+                               const Color start_color,
+                               const int num_branch,
+                               const SearchMode mode) {
+    Hands hands1;
+    find_next(start_data, start_color, &hands1);
 
-    float (*evaluate_function)(Color, Summary);
-    switch (mode) {
-        case MONTECALRO_MODE_WIN:
-            evaluate_function = &evaluate_function_mode_win;
-            break;
+    if (hands1.n == 0) return (SearchResult) {-1, -1};
 
-        case MONTECALRO_MODE_LOSE:
-            evaluate_function = &evaluate_function_mode_lose;
-            break;
+    float max_min_score = -1e9f;
 
-        case MONTECALRO_MODE_DRAW:
-        default:
-            evaluate_function = &evaluate_function_mode_draw;
-            break;
-    }
+    int best_x = hands1.x[0];
+    int best_y = hands1.y[0];
 
-    int *buf_x = (int *) malloc(sizeof(int) * 64);
-    int *buf_y = (int *) malloc(sizeof(int) * 64);
-    int n_valid_hands = 0;
-    find_next(data, start_color, buf_x, buf_y, &n_valid_hands);
-
-    if (n_valid_hands == 0) return (MontecarloResult) {-1, -1, 0};
-
-    int *buf_win_count = (int *) calloc(sizeof(int), (size_t) n_valid_hands);
-    int *buf_x2 = (int *) malloc(sizeof(int) * 64);
-    int *buf_y2 = (int *) malloc(sizeof(int) * 64);
-
-    for (int i_hand = 0; i_hand < n_valid_hands; i_hand++) {
+    for (int i1 = 0; i1 < hands1.n; i1++) {
 
         for (int i_branch = 0; i_branch < num_branch; i_branch++) {
-            BitBoardData board = put_and_flip(data, start_color, buf_x[i_hand], buf_y[i_hand]);
+            BitBoardData current_data = put_and_flip(start_data, start_color, hands1.x[i1], hands1.y[i1]);
             int pass_count = 0;
-            Color current = other(start_color);
-            while (1) {
-                int n_valid_hands2 = 0;
-                find_next(board, current, buf_x2, buf_y2, &n_valid_hands2);
+            Color current_color = other(start_color);
+            float min_score = 1e9;
 
-                if (n_valid_hands2 == 0) {
+            while (1) {
+                Hands hands2;
+                find_next(current_data, current_color, &hands2);
+
+                if (hands2.n == 0) {
                     pass_count++;
                     if (pass_count >= 2) break;
 
-                    current = other(current);
+                    current_color = other(current_color);
                     continue;
 
                 } else {
                     pass_count = 0;
 
-                    const int selected_hand = xor128() % n_valid_hands2;
-                    board = put_and_flip(board, current, buf_x2[selected_hand], buf_y2[selected_hand]);
-                    current = other(current);
+                    const int selected_hand = xor128() % hands2.n;
+                    current_data = put_and_flip(current_data, current_color, hands2.x[selected_hand], hands2.y[selected_hand]);
+                    current_color = other(current_color);
                 }
             }
 
-            Summary s = summarize(board);
-            buf_win_count[i_hand] += evaluate_function(start_color, s);
+            float current_score = evaluate(start_color, current_data, mode);
+            min_score = min_score < current_score ? min_score : current_score;
+
+            if (min_score > max_min_score) {
+                max_min_score = min_score;
+                best_x = hands1.x[i1];
+                best_y = hands1.y[i1];
+            }
         }
     }
 
-    free(buf_x2);
-    free(buf_y2);
+    return (SearchResult) {best_x, best_y};
+};
 
-    int best_win_count = buf_win_count[0];
-    int best_x = buf_x[0];
-    int best_y = buf_y[0];
-    for (int i_hand = 1; i_hand < n_valid_hands; i_hand++) {
-        if (best_win_count > buf_win_count[i_hand]) continue;
+typedef struct {
+    BitBoardData data;
+    Color color;
+    int pass_count;
+    void *next;
+} TraverseNode;
 
-        best_win_count = buf_win_count[i_hand];
-        best_x = buf_x[i_hand];
-        best_y = buf_y[i_hand];
+SearchResult traverse_search(BitBoardData start_data,
+                             const Color start_color,
+                             const SearchMode mode) {
+    Hands hands1;
+    find_next(start_data, start_color, &hands1);
+
+    if (hands1.n == 0) return (SearchResult) {-1, -1};
+
+    float max_min_score = -1e9f;
+    int best_x = hands1.x[0];
+    int best_y = hands1.y[0];
+
+    for (int i1 = 0; i1 < hands1.n; i1++) {
+        TraverseNode *current_node = malloc(sizeof(TraverseNode));
+        TraverseNode *last_node = current_node;
+
+        float min_score = 1e9;
+
+        current_node->data = put_and_flip(start_data, start_color, hands1.x[i1], hands1.y[i1]);
+        current_node->color = other(start_color);
+        current_node->pass_count = 0;
+        current_node->next = 0x0;
+
+        while (current_node != 0x0) {
+            Hands hands2;
+            find_next(current_node->data, current_node->color, &hands2);
+
+            if (hands2.n == 0) {
+                if (current_node->pass_count == 1) {
+                    float current_score = evaluate(start_color, current_node->data, mode);
+                    min_score = current_score < min_score ? current_score : min_score;
+
+                } else {
+                    TraverseNode *next = malloc(sizeof(TraverseNode));
+                    next->data = current_node->data;
+                    next->color = other(current_node->color);
+                    next->pass_count = 1;
+                    next->next = 0x0;
+
+                    last_node->next = next;
+                    last_node = next;
+                }
+            } else {
+                for (int i2 = 0; i2 < hands2.n; i2++) {
+                    TraverseNode *next = malloc(sizeof(TraverseNode));
+                    next->data = put_and_flip(current_node->data, current_node->color, hands2.x[i2], hands2.y[i2]);
+                    next->color = other(current_node->color);
+                    next->pass_count = 0;
+                    next->next = 0x0;
+
+                    last_node->next = next;
+                    last_node = next;
+                }
+            }
+
+            TraverseNode *next = current_node->next;
+            free(current_node);
+            current_node = next;
+        }
+
+        if (min_score > max_min_score) {
+            max_min_score = min_score;
+            best_x = hands1.x[i1];
+            best_y = hands1.y[i1];
+        }
     }
 
-    free(buf_x);
-    free(buf_y);
-    free(buf_win_count);
-
-    return (MontecarloResult) {best_x, best_y, best_win_count};
+    return (SearchResult) {best_x, best_y};
 };
 
 void get_score_prob(BitBoardData data,
@@ -224,8 +292,6 @@ void get_score_prob(BitBoardData data,
 
     for (int i = 0; i < 127; i++) prob[i] = 0;
 
-    int buf_x[64];
-    int buf_y[64];
     int num_valid_hands = 0;
 
     for (int i_branch = 0; i_branch < num_branch; i_branch++) {
@@ -234,11 +300,13 @@ void get_score_prob(BitBoardData data,
         Color current_color = start_color;
 
         while (1) {
+            Hands hands;
+
             if (current_color == self_color) {
 
                 //自分：ランダム
-                find_next(current_data, current_color, buf_x, buf_y, &num_valid_hands);
-                if (num_valid_hands == 0) {
+                find_next(current_data, current_color, &hands);
+                if (hands.n == 0) {
                     pass_count++;
                     if (pass_count >= 2) break;
 
@@ -246,22 +314,22 @@ void get_score_prob(BitBoardData data,
                     pass_count = 0;
 
                     const int selected_hand = xor128() % num_valid_hands;
-                    current_data = put_and_flip(current_data, current_color, buf_x[selected_hand], buf_y[selected_hand]);
+                    current_data = put_and_flip(current_data, current_color, hands.x[selected_hand], hands.y[selected_hand]);
                 }
 
             } else {
 
                 //相手：勝ち目標モンテカルロ
-                MontecarloResult res = montecalro(current_data, current_color, 10, MONTECALRO_MODE_WIN);
+                SearchResult res = montecalro_search(current_data, current_color, 10, SEARCH_MODE_WIN);
 
-                if (res.best_x == -1) {
+                if (res.x == -1) {
                     pass_count++;
                     if (pass_count >= 2) break;
 
                 } else {
                     pass_count = 0;
 
-                    current_data = put_and_flip(current_data, current_color, res.best_x, res.best_y);
+                    current_data = put_and_flip(current_data, current_color, res.x, res.y);
                 }
 
             }
@@ -284,14 +352,12 @@ BitBoardData get_score_prob2(float *prob,
 
     for (int i = 0; i < 127; i++) prob[i] = 0;
 
-    int buf_x[64];
-    int buf_y[64];
     int num_valid_hands = 0;
     BitBoardData current_data;
     Color current_color;
 
     BitBoardData BIT_BOARD_INITIAL;
-    for (int i = 0; i < 4; i++) ((int *)&BIT_BOARD_INITIAL)[i] = 0xFFFFFFFF;
+    for (int i = 0; i < 4; i++) ((int *) &BIT_BOARD_INITIAL)[i] = 0xFFFFFFFF;
     BitFSet(&BIT_BOARD_INITIAL, 3, 3, WHITE);
     BitFSet(&BIT_BOARD_INITIAL, 4, 4, WHITE);
     BitFSet(&BIT_BOARD_INITIAL, 3, 4, BLACK);
@@ -304,9 +370,10 @@ BitBoardData get_score_prob2(float *prob,
         current_data = BIT_BOARD_INITIAL;
 
         while (num_stone < num_start_stone) {
-            find_next(current_data, current_color, buf_x, buf_y, &num_valid_hands);
+            Hands hands;
+            find_next(current_data, current_color, &hands);
 
-            if (num_valid_hands == 0) {
+            if (hands.n == 0) {
                 pass_count++;
                 if (pass_count >= 2) break;
 
@@ -314,7 +381,7 @@ BitBoardData get_score_prob2(float *prob,
                 pass_count = 0;
 
                 const int selected_hand = xor128() % num_valid_hands;
-                current_data = put_and_flip(current_data, current_color, buf_x[selected_hand], buf_y[selected_hand]);
+                current_data = put_and_flip(current_data, current_color, hands.x[selected_hand], hands.y[selected_hand]);
                 num_stone++;
             }
 
