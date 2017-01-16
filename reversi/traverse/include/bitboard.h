@@ -149,6 +149,7 @@ static float evaluate(Color start_color, BitBoardData data, SearchMode mode) {
 typedef struct {
     int x;
     int y;
+    float score;
 } SearchResult;
 
 SearchResult montecalro_search(BitBoardData start_data,
@@ -158,7 +159,7 @@ SearchResult montecalro_search(BitBoardData start_data,
     Hands hands1;
     find_next(start_data, start_color, &hands1);
 
-    if (hands1.n == 0) return (SearchResult) {-1, -1};
+    if (hands1.n == 0) return (SearchResult) {-1, -1, -1};
 
     float max_min_score = -1e9f;
 
@@ -204,7 +205,7 @@ SearchResult montecalro_search(BitBoardData start_data,
         }
     }
 
-    return (SearchResult) {best_x, best_y};
+    return (SearchResult) {best_x, best_y, max_min_score};
 };
 
 typedef struct {
@@ -216,11 +217,21 @@ typedef struct {
 
 SearchResult traverse_search(BitBoardData start_data,
                              const Color start_color,
-                             const SearchMode mode) {
+                             const Color base_color,
+                             const SearchMode mode,
+                             int pass_count) {
     Hands hands1;
     find_next(start_data, start_color, &hands1);
 
-    if (hands1.n == 0) return (SearchResult) {-1, -1};
+    if (hands1.n == 0) {
+        if (pass_count >= 1) {
+            float score = evaluate(base_color, start_data, mode);
+            return (SearchResult) {-1, -1, score};
+
+        } else {
+            return traverse_search(start_data, other(start_color), base_color, mode, 1);
+        }
+    }
 
     int best_x = hands1.x[0];
     int best_y = hands1.y[0];
@@ -229,52 +240,9 @@ SearchResult traverse_search(BitBoardData start_data,
 
 #pragma omp parallel for
     for (int i1 = 0; i1 < hands1.n; i1++) {
-        TraverseNode *current_node = malloc(sizeof(TraverseNode));
-        TraverseNode *last_node = current_node;
-
-        min_score[i1] = -1e9f;
-
-        current_node->data = put_and_flip(start_data, start_color, hands1.x[i1], hands1.y[i1]);
-        current_node->color = other(start_color);
-        current_node->pass_count = 0;
-        current_node->next = 0x0;
-
-        while (current_node != 0x0) {
-            Hands hands2;
-            find_next(current_node->data, current_node->color, &hands2);
-
-            if (hands2.n == 0) {
-                if (current_node->pass_count == 1) {
-                    float current_score = evaluate(start_color, current_node->data, mode);
-                    min_score[i1] = current_score < min_score[i1] ? current_score : min_score[i1];
-
-                } else {
-                    TraverseNode *next = malloc(sizeof(TraverseNode));
-                    next->data = current_node->data;
-                    next->color = other(current_node->color);
-                    next->pass_count = 1;
-                    next->next = 0x0;
-
-                    last_node->next = next;
-                    last_node = next;
-                }
-            } else {
-                for (int i2 = 0; i2 < hands2.n; i2++) {
-                    TraverseNode *next = malloc(sizeof(TraverseNode));
-                    next->data = put_and_flip(current_node->data, current_node->color, hands2.x[i2], hands2.y[i2]);
-                    next->color = other(current_node->color);
-                    next->pass_count = 0;
-                    next->next = 0x0;
-
-                    last_node->next = next;
-                    last_node = next;
-                }
-            }
-
-            TraverseNode *next = current_node->next;
-            free(current_node);
-            current_node = next;
-        }
+        min_score[i1] = traverse_search(put_and_flip(start_data, start_color, hands1.x[i1], hands1.y[i1]),
+                                        other(start_color), base_color,
+                                        mode, 0).score;
     }
 
     float max_min_score = min_score[0];
@@ -287,7 +255,7 @@ SearchResult traverse_search(BitBoardData start_data,
         }
     }
 
-    return (SearchResult) {best_x, best_y};
+    return (SearchResult) {best_x, best_y, max_min_score};
 };
 
 void get_score_prob(BitBoardData data,

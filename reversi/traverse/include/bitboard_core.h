@@ -59,7 +59,7 @@ static PyObject *BitBoard_traverse(BitBoard *self, PyObject *args, PyObject *key
     static char *kwlist[] = {"color", "mode", NULL};
     if (!PyArg_ParseTupleAndKeywords(args, keywds, "i|i", kwlist, &start_color, &mode)) return NULL;
 
-    SearchResult result = traverse_search(self->data, start_color, mode);
+    SearchResult result = traverse_search(self->data, start_color, start_color, mode, 0);
 
     return Py_BuildValue("(ii)", result.x, result.y);
 }
