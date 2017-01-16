@@ -167,7 +167,7 @@ SearchResult montecalro_search(BitBoardData start_data,
     int best_y = hands1.y[0];
 
     for (int i1 = 0; i1 < hands1.n; i1++) {
-
+#pragma omp parallel for
         for (int i_branch = 0; i_branch < num_branch; i_branch++) {
             BitBoardData current_data = put_and_flip(start_data, start_color, hands1.x[i1], hands1.y[i1]);
             int pass_count = 0;
@@ -207,13 +207,6 @@ SearchResult montecalro_search(BitBoardData start_data,
 
     return (SearchResult) {best_x, best_y, max_min_score};
 };
-
-typedef struct {
-    BitBoardData data;
-    Color color;
-    int pass_count;
-    void *next;
-} TraverseNode;
 
 SearchResult traverse_search(BitBoardData start_data,
                              const Color start_color,
