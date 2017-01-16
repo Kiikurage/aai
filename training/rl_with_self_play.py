@@ -120,7 +120,7 @@ def main():
                         stone_cnt = b[0:2].sum()
                         if c == player_color and stone_cnt >= 64 - 12:
                             # 残り12手は探索で。
-                            x, y = traverse.BitBoard(board).traverse(c)
+                            x, y = traverse.BitBoard(board).traverse(c, 3)
                             ply = x * 8 + y
 
                         else:
