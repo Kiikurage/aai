@@ -166,7 +166,7 @@ var moveCount = 0;
             if (board[i] != "empty")
                 numStone += 1;
         }
-        if (numStone == 10) {
+        if (numStone == 64) {
             return true;
         } else {
             return false;
