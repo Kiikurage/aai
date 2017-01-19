@@ -35,6 +35,8 @@ def main():
     parser.add_argument('--gpu', '-g', type=int, default=-1, help='GPU device ID')
     parser.add_argument('--epoch', '-e', type=int, default=10000, help='# of epoch')
     parser.add_argument('--batch_size', type=int, default=64, help='size of mini-batch')
+    parser.add_argument('--adam_eps', type=float, default=1e-2, help='parameter eps in adam')
+    parser.add_argument('--adam_alpha', type=float, default=1e-5, help='parameter alpha in adam')
     parser.add_argument('--density', type=int, default=1, help='density of cnn kernel')
     parser.add_argument('--no_bn', dest='use_bn', action='store_false', default=True)
     parser.add_argument('--out', default='')
@@ -69,7 +71,7 @@ def main():
             f.write('{} = {}\n'.format(k, v))
 
     # optimizer
-    optimizer = chainer.optimizers.Adam(alpha=1e-4)
+    optimizer = chainer.optimizers.Adam(alpha=args.adam_alpha, eps=args.adam_eps)
     optimizer.setup(player_model)
 
     # start training
@@ -78,6 +80,7 @@ def main():
     # opponent model
     opponent_models = [args.init]
 
+    win_rate_summary = []
     for epoch in range(args.epoch):
 
         # load opponent model
@@ -118,9 +121,10 @@ def main():
                         x_batch[i] = board.to_state(b, 1 - c, turn + 1)
                     else:
                         stone_cnt = b[0:2].sum()
-                        if c == player_color and stone_cnt >= 64 - 12:
+                        if c == player_color and stone_cnt >= 64 - 12:#and False:
                             # 残り12手は探索で。
-                            x, y = traverse.BitBoard(board).traverse(c, 3)
+                            print('in zentansaku', stone_cnt)
+                            x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 1)
                             ply = x * 8 + y
 
                         else:
@@ -154,14 +158,15 @@ def main():
                 results[(batch_size // 2) * player_color+i] = res if player_color == Color.Black else -res
 
         # train (policy gradient)
-        optimizer.update(player_model, states, plies, results, ply_nums)
+        # optimizer.update(player_model, states, plies, results, ply_nums)
 
         win_rate = np.mean([max(r, 0) for r in results])
         progress_report(start, epoch, batch_size, win_rate)
-
+        win_rate_summary.append(win_rate)
         if epoch % 100 == 0:
             serializers.save_hdf5(os.path.join(out_dir, "models", "rl_policy_{}.model".format(epoch)), player_model)
-            print()
+            print('\nwin_rate_summary {}'.format(np.mean(win_rate_summary)))
+            win_rate_summary = []
 
 
 if __name__ == '__main__':

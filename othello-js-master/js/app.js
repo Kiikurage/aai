@@ -77,10 +77,12 @@ var moveCount = 0;
 
     var minimumDelayForAI = 500; // milliseconds
 
-    function chooseMoveByAI(gameTree, ai) {
+    function chooseMoveByAI(gameTree, playerType) {
         $('#message').text('Now thinking...');
         moveCount += 1;
         gameTree.count = moveCount;
+        gameTree.aiType = playerType;
+        console.log(playerType);
         $.ajax({
                 url: '/getMove',
                 type: 'POST',
@@ -138,9 +140,9 @@ var moveCount = 0;
         if (playerType === 'human') {
             return setUpUIToChooseMove;
         } else {
-            var ai = O.makeAI(playerType);
+            // var ai = O.makeAI(playerType);
             return function(gameTree) {
-                chooseMoveByAI(gameTree, ai);
+                chooseMoveByAI(gameTree, playerType);
             };
         }
     }
@@ -233,7 +235,7 @@ var moveCount = 0;
             .attr('disabled', 'disabled');
         playerTable[O.BLACK] = makePlayer(blackPlayerType());
         playerTable[O.WHITE] = makePlayer(whitePlayerType());
-        O.makeInitialGameTree().count = 0;
+
         shiftToNewGameTree(O.makeInitialGameTree());
     }
 
