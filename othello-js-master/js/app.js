@@ -1,4 +1,5 @@
 var moveCount = 0;
+var diffList = [];
 (function(O) {
     'use strict';
 
@@ -102,7 +103,7 @@ var moveCount = 0;
         moveCount += 1;
         gameTree.count = moveCount;
         gameTree.aiType = playerType;
-        console.log(playerType);
+        // console.log(playerType);
         $.ajax({
                 url: '/getMove',
                 type: 'POST',
@@ -111,7 +112,7 @@ var moveCount = 0;
                 contentType: 'application/json'
             })
             .then(function(data, textStatus, jqXHR) {
-                console.log(data);
+                // console.log(data);
 
                 var start = Date.now();
                 if (data["index"] > -1) {
@@ -142,12 +143,13 @@ var moveCount = 0;
             n[board[i]]++;
         var numText = Math.abs(n[BLACK]-n[WHITE]);
 
+        diffList[diffList.length] = numText;
+
         if (r == 0) {
             $('#message').css("fontSize", "35px");
             $('#message').css("color", "#FF5733");
             $('#message').text("DRAW  GAME");
         } else {
-
             $('#message').css("fontSize", "20px");
             $('#message').html('The winner is ' + (r === 1 ? O.BLACK : O.WHITE) +'<br><br>'+'Difference is '+ numText);
         }
@@ -205,22 +207,20 @@ var moveCount = 0;
     function shiftToNewGameTree(gameTree) {
         drawGameBoard(gameTree.board, gameTree.player, gameTree.moves);
         resetUI();
-        if (judgeFinishGame(gameTree)) {
+        // if (judgeFinishGame(gameTree)) {
+        //     showWinner(gameTree.board);
+        //     setUpUIToReset();
+        // } else {
+        if (gameTree.moves.length === 0) {
             showWinner(gameTree.board);
+            recordStat(gameTree.board);
+            if ($('#repeat-games:checked').length)
+                showStat();
             setUpUIToReset();
         } else {
-            if (gameTree.moves.length === 0) {
-                showWinner(gameTree.board);
-                recordStat(gameTree.board);
-                if ($('#repeat-games:checked').length)
-                    showStat();
-                setUpUIToReset();
-            } else {
-                playerTable[gameTree.player](gameTree);
-            }
+            playerTable[gameTree.player](gameTree);
         }
-
-
+        // }
     }
 
     var stats = {};
@@ -238,6 +238,7 @@ var moveCount = 0;
             s.d++;
         if (r === -1)
             s.w++;
+
         stats[[blackPlayerType(), whitePlayerType()]] = s;
     }
 
