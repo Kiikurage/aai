@@ -44,7 +44,7 @@ class ValueNet(chainer.Chain):
         super(ValueNet, self).__init__(**layers)
 
     # noinspection PyUnresolvedReferences,PyCallingNonCallable
-    def predict(self, x, train=True):
+    def predict(self, x, train=False):
         if self.use_bn:
             h1 = F.relu(self.conv1(x))
             h2 = F.relu(self.norm2(self.conv2(h1), test=not train))
@@ -73,3 +73,14 @@ class ValueNet(chainer.Chain):
         self.accuracy = F.accuracy(pred_score, t)
 
         return self.loss
+
+    def predict_valid(self, b, c):
+
+        for x in range(8):
+            for y in range(8):
+                if board.is_valid(b, c, x, y):
+                    if 1.0 * a > best_rate:
+                        best_rate = 1.0 * a
+                        best_x = x
+                        best_y = y
+                        print(best_rate, best_x, best_y)

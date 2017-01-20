@@ -36,7 +36,7 @@ def main():
     parser.add_argument('--epoch', '-e', type=int, default=10000, help='# of epoch')
     parser.add_argument('--batch_size', type=int, default=64, help='size of mini-batch')
     parser.add_argument('--adam_eps', type=float, default=1e-2, help='parameter eps in adam')
-    parser.add_argument('--adam_alpha', type=float, default=1e-5, help='parameter alpha in adam')
+    parser.add_argument('--adam_alpha', type=float, default=1e-4, help='parameter alpha in adam')
     parser.add_argument('--density', type=int, default=1, help='density of cnn kernel')
     parser.add_argument('--no_bn', dest='use_bn', action='store_false', default=True)
     parser.add_argument('--out', default='')
@@ -121,7 +121,7 @@ def main():
                         x_batch[i] = board.to_state(b, 1 - c, turn + 1)
                     else:
                         stone_cnt = b[0:2].sum()
-                        if c == player_color and stone_cnt >= 64 - 12:#and False:
+                        if c == player_color and stone_cnt >= 64 - 12 and False:  ##############
                             # 残り12手は探索で。
                             print('in zentansaku', stone_cnt)
                             x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 1)
@@ -158,9 +158,9 @@ def main():
                 results[(batch_size // 2) * player_color+i] = res if player_color == Color.Black else -res
 
         # train (policy gradient)
-        # optimizer.update(player_model, states, plies, results, ply_nums)
+        optimizer.update(player_model, states, plies, results, ply_nums)
 
-        win_rate = np.mean([max(r, 0) for r in results])
+        win_rate = np.mean(np.array(results) >= 0)
         progress_report(start, epoch, batch_size, win_rate)
         win_rate_summary.append(win_rate)
         if epoch % 100 == 0:

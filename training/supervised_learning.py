@@ -16,7 +16,7 @@ from chainer import serializers
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from reversi import board
-from models import SLPolicy
+from models import SLPolicy, RolloutPolicy
 
 # DATA_DIR = '/mnt/share/aai_fukuta/'
 DATA_DIR = '/home/mil/fukuta/work_space/iizuka_aai/train_data/'
@@ -119,7 +119,8 @@ def main():
     parser.set_defaults(test=False)
     args = parser.parse_args()
 
-    model = SLPolicy(use_bn=args.use_bn)
+    # model = SLPolicy(use_bn=args.use_bn)
+    model = RolloutPolicy()
 
     # log directory
     out = datetime.datetime.now().strftime('%m%d')
