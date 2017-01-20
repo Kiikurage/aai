@@ -11,6 +11,13 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from reversi import board
 
 
+def batch_softmax(x, T=1.0):
+    y = x - x.max(axis=1, keepdims=True)
+    y = np.exp(y / T)
+    y /= y.sum(axis=1, keepdims=True)
+    return y
+
+
 class ValueNet(chainer.Chain):
     """Supervised learning policy network"""
 
@@ -74,13 +81,16 @@ class ValueNet(chainer.Chain):
 
         return self.loss
 
-    def predict_valid(self, b, c):
-
+    def predict_valid(self, b, c, t):
+        board_batch = []
+        valid_ply = []
         for x in range(8):
             for y in range(8):
                 if board.is_valid(b, c, x, y):
-                    if 1.0 * a > best_rate:
-                        best_rate = 1.0 * a
-                        best_x = x
-                        best_y = y
-                        print(best_rate, best_x, best_y)
+                    valid_ply.append((x, y))
+                    b_ = board.put(b, c, x, y)
+                    board_batch.append(board.to_state(b_, 1 - c, t + 1))
+        x_batch = chainer.Variable(self.xp.array(np.stack(board_batch), 'float32'), volatile=True)
+        score = self.predict(x_batch, train=False)
+
+        return {a: b for a, b in zip(valid_ply, batch_softmax(cuda.to_cpu(score.data)))}
