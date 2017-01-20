@@ -98,7 +98,7 @@ class SLPolicy(chainer.Chain):
         state = board.to_state(b, color, turn)
         x = chainer.Variable(self.xp.array([state], 'float32'), volatile=True)
         scores = self.predict(x, False)
-        pred = softmax(cuda.to_cpu(scores.data[0]), mask=state[2].ravel(), T=0.5)
+        pred = softmax(cuda.to_cpu(scores.data[0]), mask=state[2].ravel(), T=temperature)
         action = np.random.choice(64, p=pred)
 
         return action
