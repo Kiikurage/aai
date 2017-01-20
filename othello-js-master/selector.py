@@ -2,17 +2,19 @@ import random, sys, os
 import numpy as np
 from chainer import serializers
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
+import time
 from reversi import board, traverse
-from models import SLPolicy
+from models import SLPolicy, ValueNet
 
 from montecarlo_policy import MontecarloPolicy
 
 policy = None
 traverse_policy = None
+value_net = None
 
 sl_policy_path1 = '/home/mil/fukuta/work_space/aai/runs/0108_final/models/sl_policy_10.model'
 sl_policy_path2 = '/home/mil/fukuta/work_space/aai/runs/0116_new_kifu/models/sl_policy_15.model'
+value_net_path = '/home/mil/fukuta/work_space/aai/runs_value/0110_second/models/value_net_20.model'
 
 class Selector:
     # TODO 持つべきは過去の手数の履歴、と現在の状況
@@ -28,7 +30,9 @@ def init(ai_type):
     print(ai_type)
     a, b = ai_type.split('-')
 
-    global policy, traverse_policy
+    global policy, traverse_policy, value_net
+
+    value_net = ValueNet()
 
     if a == 'slpolicy':
         policy = SLPolicy()
@@ -66,10 +70,10 @@ def select_move(gameTree):
     # print(b)
     stone_cnt = b[0].sum() + b[1].sum()
     if 64 - stone_cnt > 12:
-        print("SL")
+        print("SL", stone_cnt)
         act = policy.act(b, color, turn, temperature=1)
     else:
-        print("TRAVERSE")
+        print("TRAVERSE", stone_cnt)
         act = traverse_policy.act(b, color, turn, temperature=1)
 
     best_move = {"x": act % 8, "y": act // 8}

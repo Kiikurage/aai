@@ -36,6 +36,10 @@
                 Black:
                 <select id="black-player-type">
                     <option value="human" selected>Human</option>
+                    <option value="slpolicy-draw">AI (SL Policy and traverse to draw)</option>
+                    <option value="slpolicy-win">AI (SL Policy and traverse to win)</option>
+                    <option value="slpolicy2-win">AI (SL Policy learned with human kifu and win)</option>
+                    <option value="slpolicy2-draw">AI (SL Policy learned with human kifu and draw)</option>
                     <option value="simpleCount-131072">AI (Type A; try to get many disks)</option>
                     <option value="basic-131072">AI (Type B; try to own corner positions)</option>
                     <option value="better-131072">AI (Type C; try to own corner positions carefully)</option>
@@ -105,7 +109,7 @@
         <button id="start-button" class="btn btn-primary" type="submit">Start a new game</button>
     </div>
 </div>
-
+{{ }}
 <script src="vendor/jquery/jquery-1.9.1.min.js"></script>
 <script src="vendor/twitter-bootstrap/js/bootstrap.min.js"></script>
 <script src="js/othello.js"></script>

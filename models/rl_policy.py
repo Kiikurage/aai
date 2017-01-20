@@ -85,7 +85,7 @@ class RLPolicy(chainer.Chain):
 
             sum_loss += loss / ply_num[i]
 
-        return -sum_loss
+        return - sum_loss / len(states)
 
     # noinspection PyCallingNonCallable
     def act(self, b, color, turn, temperature=1):

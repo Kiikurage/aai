@@ -77,7 +77,27 @@ var moveCount = 0;
 
     var minimumDelayForAI = 500; // milliseconds
 
-    function chooseMoveByAI(gameTree, playerType) {
+    function chooseMoveByAI(gameTree, ai) {
+        $('#message').text('Now thinking...');
+        setTimeout(
+            function () {
+                var start = Date.now();
+                var newGameTree = O.force(ai.findTheBestMove(gameTree).gameTreePromise);
+                var end = Date.now();
+                var delta = end - start;
+                setTimeout(
+                    function () {
+                        shiftToNewGameTree(newGameTree);
+                    },
+                    Math.max(minimumDelayForAI - delta, 1)
+                );
+            },
+            1
+        );
+    }
+
+
+    function chooseMoveByMyAI(gameTree, playerType) {
         $('#message').text('Now thinking...');
         moveCount += 1;
         gameTree.count = moveCount;
@@ -139,10 +159,16 @@ var moveCount = 0;
     function makePlayer(playerType) {
         if (playerType === 'human') {
             return setUpUIToChooseMove;
-        } else {
-            // var ai = O.makeAI(playerType);
+        } else if (playerType.match('policy')) {
+            console.log('myAI');
             return function(gameTree) {
-                chooseMoveByAI(gameTree, playerType);
+                chooseMoveByMyAI(gameTree, playerType);
+            };
+        } else {
+            console.log('OriginalAI');
+            var ai = O.makeAI(playerType);
+            return function(gameTree) {
+                chooseMoveByAI(gameTree, ai);
             };
         }
     }

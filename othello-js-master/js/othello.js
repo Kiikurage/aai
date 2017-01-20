@@ -91,7 +91,7 @@ var othello = {};
       player: player,
       moves: listPossibleMoves(board, player, wasPassed, nest),
       count: 0,
-      aiType: "human"
+      aiType: 'human'
     };
   }
 
@@ -540,6 +540,7 @@ var othello = {};
       var level = parseInt(tokens[1]);
       var extras = tokens.slice(2);
       var scorePosition = scorePositions[aiType];
+      console.log(aiType);
       if (scorePosition !== undefined) {
         return makeScoreBasedAI({
           level: level,
@@ -635,6 +636,22 @@ var othello = {};
   };
 
   function makeScoreBasedAI(config) {
+    return {
+      findTheBestMove: function (gameTree) {
+        var ratings = calculateMaxRatings(
+          limitGameTreeWithFeasibleDepth(gameTree, config.level),
+          gameTree.player,
+          Number.MIN_VALUE,
+          Number.MAX_VALUE,
+          config.scorePosition
+        );
+        var maxRating = Math.max.apply(null, ratings);
+        return gameTree.moves[ratings.indexOf(maxRating)];
+      }
+    };
+  }
+
+  function makeScoreBasedMyAI(config) {
     return {
       findTheBestMove: function (gameTree) {
         //Modify for AAI program

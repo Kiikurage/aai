@@ -1,22 +1,10 @@
 from flask import Flask, request, json
-from chainer import serializers
 import sys, os
-import pprint as pp
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from models import SLPolicy
+import time
 import selector
 
-# from montecarlo_policy import MontecarloPolicy
-
 app = Flask(__name__, static_folder='.', static_url_path='')
-
-
-# policy_path = '/home/mil/fukuta/work_space/aai/runs/0108_final/models/'
-# # policy_path = './'
-# policy = SLPolicy()
-# # policy = MontecarloPolicy()
-# serializers.load_hdf5(policy_path + 'sl_policy_10.model', policy)
 
 
 @app.route('/')
@@ -44,7 +32,7 @@ def face_info():
         selector.init(game_tree['aiType'])
 
     best_move = selector.select_move(game_tree)
-
+    time.sleep(0.1)
     return json.jsonify(index=best_move)
 
 
