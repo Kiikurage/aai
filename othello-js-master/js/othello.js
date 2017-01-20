@@ -89,7 +89,9 @@ var othello = {};
     return {
       board: board,
       player: player,
-      moves: listPossibleMoves(board, player, wasPassed, nest)
+      moves: listPossibleMoves(board, player, wasPassed, nest),
+      count: 0,
+      aiType: "human"
     };
   }
 

@@ -18,7 +18,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from reversi import board
 from models import SLPolicy
 
-DATA_DIR = '/mnt/share/aai_fukuta/'
+# DATA_DIR = '/mnt/share/aai_fukuta/'
+DATA_DIR = '/home/mil/fukuta/work_space/iizuka_aai/train_data/'
 train_path = DATA_DIR + 'train.pkl'
 train_small_path = DATA_DIR + 'train_small.pkl'
 test_path = DATA_DIR + 'test.pkl'
@@ -183,7 +184,8 @@ def main():
             y = chainer.Variable(model.xp.array([b[1] for b in batch], 'int32'), volatile=True)
             plies = model(x, y, train=False)
             for b, ply in zip(batch, plies):
-                valid_ply_rate.append(board.is_valid(b[0][:2], b[0][4][0][0], ply // 8, ply % 8))
+                if b[1] >= 0:
+                    valid_ply_rate.append(board.is_valid(b[0][:2], b[0][4][0][0], ply // 8, ply % 8))
 
             test_loss.append(cuda.to_cpu(model.loss.data))
             test_accuracy.append(cuda.to_cpu(model.accuracy.data))
@@ -198,7 +200,7 @@ def main():
                     format(epoch, np.mean(train_loss), np.mean(train_accuracy), np.mean(test_loss),
                            np.mean(test_accuracy), np.mean(valid_ply_rate)))
 
-        if epoch % 5 == 0:
+        if epoch % 3 == 0:
             serializers.save_hdf5(os.path.join(out_dir, "models", "sl_policy_{}.model".format(epoch)), model)
 
 

@@ -1,19 +1,22 @@
 from flask import Flask, request, json
 from chainer import serializers
 import sys, os
-
+import pprint as pp
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from models import SLPolicy
 import selector
+
 # from montecarlo_policy import MontecarloPolicy
 
 app = Flask(__name__, static_folder='.', static_url_path='')
+
+
 # policy_path = '/home/mil/fukuta/work_space/aai/runs/0108_final/models/'
-policy_path = './'
-policy = SLPolicy()
-# policy = MontecarloPolicy()
-serializers.load_hdf5(policy_path + 'sl_policy_10.model', policy)
+# # policy_path = './'
+# policy = SLPolicy()
+# # policy = MontecarloPolicy()
+# serializers.load_hdf5(policy_path + 'sl_policy_10.model', policy)
 
 
 @app.route('/')
@@ -23,7 +26,7 @@ def home():
 
 
 @app.route('/initGame', methods=['POST'])
-def initGame():
+def init_game():
     return ""
 
 
@@ -34,17 +37,15 @@ def face_info():
         print(request.headers['Content-Type'])
         return json.jsonify(res='error'), 400
 
-    gameTree = request.get_json()
-    # print(gameTree)
-    # print(hasattr(gameTree, "count"))
-    if hasattr(gameTree, "count"):
-        if getattr(gameTree, "count") == 1:
-            selector.init()
-    global policy
-    bestMove = selector.selectMove(gameTree, policy)
-    # bestMove = selector.selectMove(gameTree["board"],gameTree["moves"],gameTree["player"],gameTree["count"])
+    game_tree = request.get_json()
+    # pp.pprint(game_tree)
+    if game_tree['count'] == 1:
+        print('init')
+        selector.init(game_tree['aiType'])
 
-    return json.jsonify(index=bestMove)
+    best_move = selector.select_move(game_tree)
+
+    return json.jsonify(index=best_move)
 
 
 '''

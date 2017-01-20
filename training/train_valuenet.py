@@ -149,7 +149,7 @@ def main():
     val_iter = iterators.SerialIterator(test, args.batch_size, repeat=False)
 
     # optimizer
-    optimizer = chainer.optimizers.Adam()
+    optimizer = chainer.optimizers.Adam(eps=1e-2)
     optimizer.setup(model)
 
     # start training
