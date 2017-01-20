@@ -16,7 +16,7 @@ from chainer import serializers
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from reversi import board
-from models import SLPolicy, RolloutPolicy
+from models import SLPolicy, RolloutPolicy, RLPolicy
 
 # DATA_DIR = '/mnt/share/aai_fukuta/'
 DATA_DIR = '/home/mil/fukuta/work_space/iizuka_aai/train_data/'
@@ -120,14 +120,15 @@ def main():
     args = parser.parse_args()
 
     # model = SLPolicy(use_bn=args.use_bn)
-    model = RolloutPolicy()
+    # model = RolloutPolicy()
+    model = RLPolicy()
 
     # log directory
     out = datetime.datetime.now().strftime('%m%d')
     if args.out:
         out = out + '_' + args.out
     out_dir = os.path.abspath(os.path.join(os.path.curdir, "runs", out))
-    os.makedirs(os.path.join(out_dir, 'models'))
+    os.makedirs(os.path.join(out_dir, 'models'), exist_ok=True)
 
     # gpu
     if args.gpu >= 0:
@@ -152,6 +153,7 @@ def main():
     # optimizer
     optimizer = chainer.optimizers.Adam()
     optimizer.setup(model)
+    optimizer.add_hook(chainer.optimizer.WeightDecay(0.001))
 
     # start training
     start = time.time()
