@@ -21,7 +21,7 @@ def batch_softmax(x, T=1.0):
 class ValueNet(chainer.Chain):
     """Supervised learning policy network"""
 
-    def __init__(self, density=1, channel=6, use_bn=True):
+    def __init__(self, density=1, channel=6, use_bn=True, output=41):
         """
         黒[0,1] | 白[0,1] | valid[0, 1] | 置いた場合にひっくり返る個数 | ターン数 | 手番
 
@@ -46,7 +46,7 @@ class ValueNet(chainer.Chain):
 
         layers['linear1'] = L.Linear(2048 * density, 1024 * density)
         layers['linear2'] = L.Linear(1024 * density, 1024 * density)
-        layers['linear3'] = L.Linear(1024 * density, 41)
+        layers['linear3'] = L.Linear(1024 * density, output)
 
         super(ValueNet, self).__init__(**layers)
 
@@ -81,7 +81,7 @@ class ValueNet(chainer.Chain):
 
         return self.loss
 
-    def predict_valid(self, b, c, t):
+    def act(self, b, c, t, temperature=1):
         board_batch = []
         valid_ply = []
         for x in range(8):
@@ -90,7 +90,21 @@ class ValueNet(chainer.Chain):
                     valid_ply.append((x, y))
                     b_ = board.put(b, c, x, y)
                     board_batch.append(board.to_state(b_, 1 - c, t + 1))
+        if len(board_batch) == 0:
+            return -1
         x_batch = chainer.Variable(self.xp.array(np.stack(board_batch), 'float32'), volatile=True)
-        score = self.predict(x_batch, train=False)
+        scores = self.predict(x_batch, train=False)
 
-        return {a: b for a, b in zip(valid_ply, batch_softmax(cuda.to_cpu(score.data)))}
+        max_rate = 0
+        best_ply = None
+        for ply, score in zip(valid_ply, batch_softmax(cuda.to_cpu(scores.data))):
+            win_rate = score[:21].sum()
+            print(ply, win_rate)
+            if win_rate > max_rate:
+                max_rate = win_rate
+                best_ply = ply
+        print('best ply', best_ply)
+
+        action = best_ply[0] * 8 + best_ply[1]
+
+        return action
