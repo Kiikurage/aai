@@ -16,7 +16,7 @@ from chainer import serializers
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from reversi import board
-from models import ValueNet
+from models import ValueNet, RolloutValueNet
 
 DATA_DIR = '/mnt/share/aai_fukuta/'
 train_path = DATA_DIR + 'train_withscore.pkl'
@@ -92,7 +92,8 @@ class PreprocessedDataset(dataset.DatasetMixin):
             b, ply = self.data_augmentation(b, ply)
 
         res = board.to_state(b, color, n)
-        score = np.clip(score, -20, 20)
+        score = np.clip(score, -40, 40)
+        score = (abs(score)+1) // 2 if score >= 0 else -((abs(score)+1)//2)
         score = score if color == 0 else -score
         return res, np.int32(score + 20)
 
@@ -120,7 +121,7 @@ def main():
     args = parser.parse_args()
 
     model = ValueNet(use_bn=args.use_bn)
-
+    # model = RolloutValueNet(use_bn=args.use_bn, output=41)
     # log directory
     out = datetime.datetime.now().strftime('%m%d')
     if args.out:
