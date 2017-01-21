@@ -113,8 +113,9 @@ def main():
                 if min(pass_cnts) >= 2:
                     break
 
-                scores = models[c].predict(models[c].xp.array(x_batch, 'float32'), False)
-                scores = cuda.to_cpu(scores.data)
+                if c == player_color:
+                    scores = models[c].predict(models[c].xp.array(x_batch, 'float32'), False)
+                    scores = cuda.to_cpu(scores.data)
 
                 for i in range(batch_size//2):
                     # gameが終わったか判定
@@ -130,26 +131,36 @@ def main():
                         x_batch[i] = board.to_state(b, 1 - c, turn + 1)
                     else:
                         stone_cnt = b[0:2].sum()
-                        if c == player_color and stone_cnt >= 64 - 8:
-                            # 残り12手は探索で。
-                            # print('in zentansaku', stone_cnt)
-                            if args.draw:
-                                x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 3)
+                        if c == player_color:
+                            if stone_cnt >= 64 - 8:
+                                # 残り12手は探索で。
+                                # print('in zentansaku', stone_cnt)
+                                if args.draw:
+                                    x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 3)
+                                else:
+                                    x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 1)
+                                ply = x * 8 + y
+
                             else:
-                                x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 1)
-                            ply = x * 8 + y
+                                pred = softmax(scores[i].astype(np.float64), mask=valid_mask, T=1)
+                                ply = np.random.choice(64, p=pred)
 
-                        else:
-                            pred = softmax(scores[i].astype(np.float64), mask=valid_mask, T=1)
-                            ply = np.random.choice(64, p=pred)
-
-                            if c == player_color:
                                 states[(batch_size // 2) * player_color + i, turn, :, :, :] = x_batch[i]
                                 plies[(batch_size // 2) * player_color + i, turn] = ply
                                 ply_nums[(batch_size // 2) * player_color + i] += 1
+                            x = ply // 8
+                            y = ply % 8
 
-                        x = ply // 8
-                        y = ply % 8
+                        else:
+                            stone_cnt = b[0].sum() + b[1].sum()
+                            b = b.astype(np.bool)
+                            bb = traverse.BitBoard(b)
+
+                            if 64 - stone_cnt > 12:
+                                x, y = bb.montecarlo(c, 10000, 1)
+                            else:
+                                x, y = traverse.BitBoard(b.astype(np.bool)).traverse(c, 1)
+
                         if not board.is_valid(b, c, x, y):
                             print(valid_mask)
                             print(scores[i])
