@@ -50,15 +50,31 @@ class RolloutPolicy(chainer.Chain):
         scores = self.linear1(h1)
         return scores
 
-    # noinspection PyCallingNonCallable
-    def __call__(self, x, ply, train=True):
-        scores = self.predict(x, train)
-        self.loss = F.softmax_cross_entropy(scores, ply)
-        self.accuracy = F.accuracy(scores, ply)
-        if train:
-            return self.loss
-        else:
-            return np.argmax(cuda.to_cpu(scores.data), axis=1)
+    # # noinspection PyCallingNonCallable
+    # def __call__(self, x, ply, train=True):
+    #     scores = self.predict(x, train)
+    #     self.loss = F.softmax_cross_entropy(scores, ply)
+    #     self.accuracy = F.accuracy(scores, ply)
+    #     if train:
+    #         return self.loss
+    #     else:
+    #         return np.argmax(cuda.to_cpu(scores.data), axis=1)
+
+    def __call__(self, states, plies, res, ply_num, train=True):
+        sum_loss = 0
+        for i in range(len(states)):
+
+            x = chainer.Variable(self.xp.array([states[i][j] for j in range(ply_num[i])], 'float32'))
+            scores = self.predict(x, train)
+
+            log_prob = F.log_softmax(scores)  # (batch_size, vocab_size)
+            loss = 0
+            for j in range(ply_num[i]):
+                loss += log_prob[j, plies[i][j]] * res[i]
+
+            sum_loss += loss / ply_num[i]
+
+        return - sum_loss / len(states)
 
     # noinspection PyCallingNonCallable
     def act(self, b, color, turn, temperature=1.):
